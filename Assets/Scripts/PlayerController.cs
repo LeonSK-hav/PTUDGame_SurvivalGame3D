@@ -8,6 +8,9 @@ public class PlayerController : MonoBehaviour
     public CharacterController controller;
     public float walkSpeed;
     public float runSpeed;
+
+    public bool IsWalking;
+    public bool IsRunning;
     Vector2 moveInput;
     bool running;
 
@@ -35,6 +38,16 @@ public class PlayerController : MonoBehaviour
         else
         {
             moveSpeed = walkSpeed;
+        }
+        if(controller.velocity.magnitude > 0.01f)
+        {
+            IsWalking = moveSpeed == walkSpeed;
+            IsRunning = moveSpeed == runSpeed;
+        }
+        else
+        {
+            IsWalking = false;
+            IsRunning = false;
         }
         controller.Move(moveDirection.normalized * moveSpeed * Time.deltaTime);
     }
