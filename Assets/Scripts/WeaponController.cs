@@ -12,6 +12,7 @@ public class WeaponController : MonoBehaviour
     public int currentBullets = 0;
     public int BulletsInMag = 8;
 
+    public int BulletsDamage = 25;
     public ParticleSystem muzzleFlash;
     public AudioSource source;
     public AudioClip shootSound;
@@ -71,7 +72,19 @@ public class WeaponController : MonoBehaviour
         RaycastHit hit;
         if(Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, BulletRange))
         {
+            Target t = hit.collider.GetComponent<Target>();
+            ZombieAI z = hit.collider.GetComponent<ZombieAI>();
             Debug.Log(hit.collider.name);
+
+            if (t != null)
+            {
+                t.OnHit();
+            }
+
+            if (z != null)
+            {
+                z.TakeDamage(BulletsDamage);
+            }
         }
     }
 }
