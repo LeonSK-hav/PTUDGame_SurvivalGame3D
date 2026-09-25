@@ -8,6 +8,9 @@ public class ZombieAI : MonoBehaviour
     public Transform target;
     public bool Runner = false;
 
+    public float walkSpeed = 2f;
+    public float runSpeed = 3.5f;
+
     [Header("Health")]
     public int currentHealth;
     public int maxHealth = 100;
@@ -23,12 +26,15 @@ public class ZombieAI : MonoBehaviour
     Animator anim;
 
     bool dead;
+    bool hit;
     private void Start()
     {
         currentHealth = maxHealth;
         anim = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
         agent.SetDestination(target.position);
+
+        agent.speed = Runner ? runSpeed : walkSpeed;
 
     }
     // Update is called once per frame
@@ -41,6 +47,7 @@ public class ZombieAI : MonoBehaviour
         {
             agent.isStopped = false;
             agent.SetDestination(target.position);
+            agent.speed = Runner ? runSpeed : walkSpeed;
         }
         else
         {
@@ -77,6 +84,7 @@ public class ZombieAI : MonoBehaviour
     }
     void TryAttack()
     {
+        if (hit || dead) return;
         if (Time.time >= attackTime)
         {
             anim.SetTrigger("Attack");
@@ -89,8 +97,10 @@ public class ZombieAI : MonoBehaviour
     }
     IEnumerator HitDuration()
     {
+        hit = true;
         agent.isStopped = true;
         yield return new WaitForSeconds(hitDuration);
         agent.isStopped = false;
+        hit = false;
     }
 }

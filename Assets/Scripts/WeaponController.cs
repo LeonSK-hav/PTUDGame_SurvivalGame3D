@@ -18,6 +18,8 @@ public class WeaponController : MonoBehaviour
     public AudioClip shootSound;
     public Transform playerCamera;
 
+    public LayerMask shootingMask;
+
     Animator animator;
     PlayerController player;
     float nextFireTime = 5f;
@@ -70,7 +72,7 @@ public class WeaponController : MonoBehaviour
         }
 
         RaycastHit hit;
-        if(Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, BulletRange))
+        if(Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, BulletRange, shootingMask))
         {
             Target t = hit.collider.GetComponent<Target>();
             ZombieAI z = hit.collider.GetComponent<ZombieAI>();
