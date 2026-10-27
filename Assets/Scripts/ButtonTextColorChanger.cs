@@ -5,7 +5,8 @@ using TMPro;
 public class ButtonTextColorChanger : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
 {
     private TextMeshProUGUI buttonText;
-    
+      
+
     // Thiết lập màu chữ cho từng trạng thái
     public Color normalColor = Color.white;
     public Color hoverColor = new Color(1f, 0.9f, 0.6f); // Màu vàng sáng khi rê chuột
@@ -20,7 +21,7 @@ public class ButtonTextColorChanger : MonoBehaviour, IPointerEnterHandler, IPoin
             buttonText.color = normalColor;
         }
     }
-
+       
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (buttonText != null) buttonText.color = hoverColor;

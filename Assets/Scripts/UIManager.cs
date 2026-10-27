@@ -87,4 +87,5 @@ public class UIManager : MonoBehaviour
         if (button != null) button.interactable = isInteractable;
     }
     #endregion
+    
 }
