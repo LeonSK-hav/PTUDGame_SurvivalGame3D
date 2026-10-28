@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a404afee1519cd942b374f71d072c678, type: 3}
+  m_Name: BrassCompass
+  m_EditorClassIdentifier: 
+  displayName: Brass Compass
+  description: Always points to adventure.
+  icon: {fileID: 21300000, guid: 270c5763318c7dd42a85c1f6e18e2e93, type: 3}
+  iconTint: {r: 0.98, g: 0.8, b: 0.36, a: 1}
+  category: 4
+  rarity: 2
+  maxStack: 1
+  value: 70
+  weight: 0.2

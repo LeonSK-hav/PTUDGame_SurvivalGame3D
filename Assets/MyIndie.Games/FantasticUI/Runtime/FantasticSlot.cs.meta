@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 6e67540a94e25e941b2a1a46ea95842b
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 123733
+  packageName: FANTASTIC UI STARTER PACK
+  packageVersion: 2.0
+  assetPath: Assets/MyIndie.Games/FantasticUI/Runtime/FantasticSlot.cs
+  uploadId: 1025038

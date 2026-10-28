@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: bcd440efb551c2d44b1986806c282d49
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 123733
+  packageName: FANTASTIC UI STARTER PACK
+  packageVersion: 2.0
+  assetPath: Assets/MyIndie.Games/FantasticUI/Samples/Scripts/FantasticGallery.cs
+  uploadId: 1025038

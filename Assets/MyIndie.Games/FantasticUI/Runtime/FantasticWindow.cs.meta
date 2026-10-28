@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 91794736d03442b4e9fe16fd907003f5
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 123733
+  packageName: FANTASTIC UI STARTER PACK
+  packageVersion: 2.0
+  assetPath: Assets/MyIndie.Games/FantasticUI/Runtime/FantasticWindow.cs
+  uploadId: 1025038

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: b8b352c6ef98ae2449a33abcb2ff9b51
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 123733
+  packageName: FANTASTIC UI STARTER PACK
+  packageVersion: 2.0
+  assetPath: Assets/MyIndie.Games/FantasticUI/Runtime/FantasticPointer.cs
+  uploadId: 1025038

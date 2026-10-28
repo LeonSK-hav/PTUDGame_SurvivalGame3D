@@ -1,0 +1,19 @@
+{
+    "name": "MyIndieGames.FantasticUI.Editor",
+    "rootNamespace": "MyIndieGames.FantasticUI.Editor",
+    "references": [
+        "MyIndieGames.FantasticUI",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

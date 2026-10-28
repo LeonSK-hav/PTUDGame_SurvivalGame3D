@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: a5482ad35a0bbe04f987ef7f7a5c2bbf
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 123733
+  packageName: FANTASTIC UI STARTER PACK
+  packageVersion: 2.0
+  assetPath: Assets/MyIndie.Games/FantasticUI/Runtime/MyIndieGames.FantasticUI.asmdef
+  uploadId: 1025038

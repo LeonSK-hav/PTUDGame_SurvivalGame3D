@@ -16,6 +16,7 @@
   <Project Path="UnityEditor.TestRunner.csproj" />
   <Project Path="Unity.AI.Navigation.Editor.ConversionSystem.csproj" />
   <Project Path="Unity.VisualScripting.State.Editor.csproj" />
+  <Project Path="MyIndieGames.FantasticUI.Samples.csproj" />
   <Project Path="Unity.Burst.CodeGen.csproj" />
   <Project Path="Unity.Postprocessing.Editor.csproj" />
   <Project Path="Unity.VisualScripting.Flow.csproj" />
@@ -25,8 +26,11 @@
   <Project Path="Unity.VisualScripting.State.csproj" />
   <Project Path="Unity.AI.Navigation.Updater.csproj" />
   <Project Path="Unity.Postprocessing.Runtime.csproj" />
+  <Project Path="MyIndieGames.FantasticUI.Editor.csproj" />
+  <Project Path="MyIndieGames.FantasticUI.csproj" />
   <Project Path="Unity.AI.Navigation.Editor.csproj" />
   <Project Path="Unity.InputSystem.ForUI.csproj" />
+  <Project Path="Gentleland.SteampunkUI.DemoAndExample.csproj" />
   <Project Path="Unity.AI.Navigation.csproj" />
   <Project Path="Unity.Collections.CodeGen.csproj" />
   <Project Path="Unity.Mathematics.Editor.csproj" />
@@ -35,6 +39,7 @@
   <Project Path="Unity.VisualScripting.Shared.Editor.csproj" />
   <Project Path="Unity.Collections.DocCodeSamples.csproj" />
   <Project Path="Unity.CollabProxy.Editor.csproj" />
+  <Project Path="Gentleland.Utils.SteampunkUI.csproj" />
   <Project Path="Unity.PlasticSCM.Editor.Entities.csproj" />
   <Project Path="Unity.Collections.Editor.csproj" />
   <Project Path="Unity.Collections.BurstCompatibilityGen.csproj" />
