@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb981fb946f80d144856cc34461552e7, type: 3}
+  m_Name: SM_Chuck_Pistol_Box_9_CLOSED
+  m_EditorClassIdentifier: 
+  itemName: SM_Chuck_Pistol_Box_9_CLOSED
+  itemIcon: {fileID: 21300000, guid: 03403f4f712d1764baa595186f69c98f, type: 3}
+  itemType: 0
+  itemUsageDescription: "V\u1EADt ph\u1EA9m sinh t\u1ED3n: SM_Chuck_Pistol_Box_9_CLOSED."
+  healAmount: 25
+  damageBonus: 0
+  maxStack: 99
