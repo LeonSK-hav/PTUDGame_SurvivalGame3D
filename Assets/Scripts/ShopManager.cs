@@ -41,7 +41,7 @@ public class ShopManager : MonoBehaviour
     private int selectedIndex = -1;           
     private int currentQuantity = 1;          
     private int maxQuantity = 1;              
-
+    
     void Start()
     {
         if (btnAdd != null) btnAdd.onClick.AddListener(OnAddButtonClicked);
@@ -248,6 +248,20 @@ public class ShopManager : MonoBehaviour
         if (selectedIndex < 0) return;
         currentQuantity = Mathf.Clamp(Mathf.RoundToInt(value), 1, maxQuantity);
         RefreshTransactionDetails();
+    }
+    // Tự động đồng bộ danh sách khi Panel được bật lên (đặc biệt hữu ích khi chuyển đổi qua lại giữa Mua và Bán)
+    void OnEnable()
+    {
+        if (!isBuyMode && inventoryManager != null)
+        {
+            SyncShopItemsFromInventory();
+        }
+        else
+        {
+            CleanAndSortShopList();
+            UpdateShopUI();
+        }
+        ClearDetails();
     }
 
     // --- LOGIC MUA VẬT PHẨM ---

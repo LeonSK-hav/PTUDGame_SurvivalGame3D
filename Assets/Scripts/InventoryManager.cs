@@ -33,13 +33,34 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
     private int draggedSlotIndex = -1;           // Ô đang bị kéo chuột
     private GameObject draggedIconClone;         // Bản sao icon đi theo chuột khi kéo
     private CanvasGroup cloneCanvasGroup;
-
+    
     void Start()
     {
-        // 1. Khởi tạo danh sách slot rỗng
-        for (int i = 0; i < totalSlots; i++)
+        // Khởi tạo hoặc làm sạch danh sách slots để tránh bị nhân đôi / lệch index
+        if (slots == null)
         {
-            slots.Add(new InventorySlot());
+            slots = new List<InventorySlot>();
+        }
+
+        // Đảm bảo danh sách luôn đúng bằng totalSlots (35 ô)
+        if (slots.Count != totalSlots)
+        {
+            slots.Clear();
+            for (int i = 0; i < totalSlots; i++)
+            {
+                slots.Add(new InventorySlot());
+            }
+        }
+        else
+        {
+            // Kiểm tra các phần tử bên trong xem có bị null không để cấp phát lại an toàn
+            for (int i = 0; i < slots.Count; i++)
+            {
+                if (slots[i] == null)
+                {
+                    slots[i] = new InventorySlot();
+                }
+            }
         }
 
         // 2. Đăng ký sự kiện nút Sử dụng
@@ -74,15 +95,42 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         UpdateInventoryUI();
         ClearDetailsPanel();
     }
+    // Hàm đảm bảo danh sách slots luôn sẵn sàng dù Inventory chưa mở
+    private void InitSlotsIfNeeded()
+    {
+        if (slots == null)
+        {
+            slots = new List<InventorySlot>();
+        }
 
+        if (slots.Count != totalSlots)
+        {
+            slots.Clear();
+            for (int i = 0; i < totalSlots; i++)
+            {
+                slots.Add(new InventorySlot());
+            }
+        }
+        else
+        {
+            for (int i = 0; i < slots.Count; i++)
+            {
+                slots[i] ??= new InventorySlot();
+            }
+        }
+    }
     // Thêm vật phẩm vào kho
     public bool AddItem(ItemData newItem, int amount)
     {
+        if (newItem == null || amount <= 0) return false;
+        // Đảm bảo dữ liệu slots đã sẵn sàng ngay cả khi Inventory chưa từng được mở
+        InitSlotsIfNeeded();
+        // 1. Kiểm tra và cộng dồn vào các ô đã có sẵn item đó (nếu không phải Equipment và chưa đạt maxStack = 99)
         if (newItem.itemType != ItemType.Equipment)
         {
             foreach (var slot in slots)
             {
-                if (slot.itemData == newItem && slot.count < 99)
+                if (slot != null && slot.itemData == newItem && slot.count < 99)
                 {
                     int spaceLeft = 99 - slot.count;
                     if (amount <= spaceLeft)
@@ -101,19 +149,24 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
             }
         }
 
+        // 2. Tìm ô trống thực sự (Sửa điều kiện kiểm tra để tránh lỗi kẹt ô trống)
         foreach (var slot in slots)
         {
-            if (slot.itemData == null)
+            if (slot != null)
             {
-                slot.itemData = newItem;
-                slot.count = Mathf.Min(amount, 99);
-                UpdateInventoryUI();
-                RefreshSelectedDetails();
-                return true;
+                // Nếu slot hoàn toàn trống hoặc count bằng 0 nhưng itemData chưa được gán null
+                if (slot.itemData == null || slot.count <= 0)
+                {
+                    slot.itemData = newItem;
+                    slot.count = Mathf.Min(amount, 99);
+                    UpdateInventoryUI();
+                    RefreshSelectedDetails();
+                    return true;
+                }
             }
         }
 
-        Debug.Log("Inventory đã đầy!");
+        Debug.Log("Inventory đã đầy thực sự!");
         return false;
     }
 
