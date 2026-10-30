@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: AK74
   itemIcon: {fileID: 21300000, guid: f66e792b7d1ed7e4882de3aacd19c85c, type: 3}
-  itemType: 0
+  itemType: 2
   itemUsageDescription: "V\u1EADt ph\u1EA9m sinh t\u1ED3n: AK74."
   healAmount: 25
   damageBonus: 0

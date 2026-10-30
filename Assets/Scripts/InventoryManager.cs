@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
@@ -13,44 +11,73 @@ public class InventorySlot
     public int count;
 }
 
-public class InventoryManager : MonoBehaviour, IDragHandler, IEndDragHandler
+public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
-    [Header("UI References (Theo cấu trúc của bạn)")]
-    public Transform slotsContainer;     // Chứa các btnSlot trong Panel lưới
-    public TextMeshProUGUI txtItemName;  // txtItemName
-    public TextMeshProUGUI txtItemUsage; // txtItemUsage
-    public TextMeshProUGUI txtCount;     // txtCount (hiển thị số lượng trên slot hoặc bảng chi tiết)
-    public Button btnUse;                // btnUse
-    public RectTransform inventoryPanelRect; // Khung Panel tổng của Inventory để kiểm tra vứt đồ ra ngoài
+    [Header("UI References")]
+    public Transform slotsContainer;             // Chứa các btnSlot trong Panel lưới
+    public TextMeshProUGUI txtItemName;          // txtItemName
+    public TextMeshProUGUI txtItemUsage;         // txtItemUsage
+    public TextMeshProUGUI txtCount;             // txtCount (hiển thị "Quantity: X")
+    public Button btnUse;                        // btnUse
+    public RectTransform inventoryPanelRect;     // Khung Panel tổng để kiểm tra vứt đồ ra ngoài
+    public Transform canvasTransform;            // Canvas chính để chứa icon clone khi kéo thả
 
     [Header("Inventory Data")]
-    public int totalSlots = 35;          // Số ô trong lưới (ví dụ lưới 7x5 = 35 ô)
+    public int totalSlots = 35;                  // Số ô trong lưới (35 ô)
     public List<InventorySlot> slots = new List<InventorySlot>();
 
-    private int selectedSlotIndex = -1;
-    private GameObject draggedIconClone;   // Dùng cho hiệu ứng kéo thả vứt đồ
+    [Header("World Drop Settings")]
+    public Transform playerTransform;            // Vị trí người chơi để sinh vật phẩm ra thế giới
+
+    private int selectedSlotIndex = -1;          // Ô đang được chọn để xem chi tiết
+    private int draggedSlotIndex = -1;           // Ô đang bị kéo chuột
+    private GameObject draggedIconClone;         // Bản sao icon đi theo chuột khi kéo
+    private CanvasGroup cloneCanvasGroup;
 
     void Start()
     {
-        // Khởi tạo danh sách slot rỗng
+        // 1. Khởi tạo danh sách slot rỗng
         for (int i = 0; i < totalSlots; i++)
         {
             slots.Add(new InventorySlot());
         }
 
-        // Đăng ký sự kiện nút Sử dụng
+        // 2. Đăng ký sự kiện nút Sử dụng
         if (btnUse != null)
         {
             btnUse.onClick.AddListener(OnUseItemButtonClicked);
+            btnUse.gameObject.SetActive(false);
+        }
+
+        // 3. Tự động gán sự kiện click cho các ô slot
+        if (slotsContainer != null)
+        {
+            for (int i = 0; i < slotsContainer.childCount; i++)
+            {
+                int index = i;
+                Transform slotTransform = slotsContainer.GetChild(i);
+                Button slotButton = slotTransform.GetComponent<Button>();
+                
+                if (slotButton != null)
+                {
+                    slotButton.onClick.RemoveAllListeners();
+                    slotButton.onClick.AddListener(() => OnSelectSlot(index));
+                }
+            }
+        }
+
+        if (canvasTransform == null)
+        {
+            canvasTransform = FindObjectOfType<Canvas>()?.transform;
         }
 
         UpdateInventoryUI();
+        ClearDetailsPanel();
     }
 
-    // Thêm vật phẩm vào kho (Giới hạn tối đa 99 mỗi slot)
+    // Thêm vật phẩm vào kho
     public bool AddItem(ItemData newItem, int amount)
     {
-        // 1. Tìm xem đã có item đó chưa để cộng dồn (nếu không phải equipment và chưa đạt 99)
         if (newItem.itemType != ItemType.Equipment)
         {
             foreach (var slot in slots)
@@ -62,6 +89,7 @@ public class InventoryManager : MonoBehaviour, IDragHandler, IEndDragHandler
                     {
                         slot.count += amount;
                         UpdateInventoryUI();
+                        RefreshSelectedDetails();
                         return true;
                     }
                     else
@@ -73,7 +101,6 @@ public class InventoryManager : MonoBehaviour, IDragHandler, IEndDragHandler
             }
         }
 
-        // 2. Nếu còn dư hoặc là item mới, tìm ô trống tiếp theo
         foreach (var slot in slots)
         {
             if (slot.itemData == null)
@@ -81,6 +108,7 @@ public class InventoryManager : MonoBehaviour, IDragHandler, IEndDragHandler
                 slot.itemData = newItem;
                 slot.count = Mathf.Min(amount, 99);
                 UpdateInventoryUI();
+                RefreshSelectedDetails();
                 return true;
             }
         }
@@ -89,10 +117,9 @@ public class InventoryManager : MonoBehaviour, IDragHandler, IEndDragHandler
         return false;
     }
 
-    // Cập nhật hiển thị lên giao diện UI
+    // Cập nhật giao diện Inventory
     public void UpdateInventoryUI()
     {
-        // Duyệt qua các button slot trong UI để gán hình ảnh và số lượng
         for (int i = 0; i < slotsContainer.childCount; i++)
         {
             if (i >= slots.Count) break;
@@ -105,16 +132,15 @@ public class InventoryManager : MonoBehaviour, IDragHandler, IEndDragHandler
             TextMeshProUGUI countText = txtCountTransform != null ? txtCountTransform.GetComponent<TextMeshProUGUI>() : null;
 
             var slotData = slots[i];
-            if (slotData.itemData != null)
+            if (slotData.itemData != null && slotData.count > 0)
             {
                 if (imgItem != null)
                 {
                     imgItem.gameObject.SetActive(true);
                     imgItem.sprite = slotData.itemData.itemIcon;
-                    // Đảm bảo màu sắc hiển thị rõ nét (Alpha = 1)
-    Color col = imgItem.color;
-    col.a = 1f;
-    imgItem.color = col;
+                    Color col = imgItem.color;
+                    col.a = 1f;
+                    imgItem.color = col;
                 }
                 if (countText != null)
                 {
@@ -124,49 +150,63 @@ public class InventoryManager : MonoBehaviour, IDragHandler, IEndDragHandler
             }
             else
             {
+                slotData.itemData = null;
+                slotData.count = 0;
+
                 if (imgItem != null) imgItem.gameObject.SetActive(false);
                 if (countText != null) countText.gameObject.SetActive(false);
             }
         }
     }
 
-    // Người dùng bấm vào một ô slot để xem thông tin
+    // Chọn ô slot để xem thông tin
     public void OnSelectSlot(int index)
     {
         if (index < 0 || index >= slots.Count) return;
         selectedSlotIndex = index;
-        var slot = slots[index];
+        RefreshSelectedDetails();
+    }
 
-        if (slot.itemData != null)
-        {
-            if (txtItemName != null) txtItemName.text = slot.itemData.itemName;
-            if (txtItemUsage != null) txtItemUsage.text = slot.itemData.itemUsageDescription;
-            if (txtCount != null) txtCount.text = slot.count.ToString();
-
-            // Nếu là trang bị (Equipment), ẩn nút Sử dụng (không được dùng bằng nút, phải kéo vào ô equipment)
-            if (btnUse != null)
-            {
-                btnUse.gameObject.SetActive(slot.itemData.itemType != ItemType.Equipment);
-            }
-        }
-        else
+    // Làm mới thông tin chi tiết item được chọn
+    void RefreshSelectedDetails()
+    {
+        if (selectedSlotIndex < 0 || selectedSlotIndex >= slots.Count)
         {
             ClearDetailsPanel();
+            return;
+        }
+
+        var slot = slots[selectedSlotIndex];
+
+        // Nếu item trống hoặc số lượng = 0 thì ẩn thông tin
+        if (slot.itemData == null || slot.count <= 0)
+        {
+            ClearDetailsPanel();
+            return;
+        }
+
+        if (txtItemName != null) txtItemName.text = slot.itemData.itemName;
+        if (txtItemUsage != null) txtItemUsage.text = slot.itemData.itemUsageDescription;
+        
+        // Hiển thị định dạng Quantity: số lượng
+        if (txtCount != null) txtCount.text = $"Quantity: {slot.count}";
+
+        if (btnUse != null)
+        {
+            btnUse.gameObject.SetActive(slot.itemData.itemType != ItemType.Equipment);
         }
     }
 
-    // Người dùng bấm nút Sử dụng (hoặc bấm nhiều lần để tăng số lượng sử dụng/tiêu thụ)
+    // Nút Sử dụng vật phẩm
     void OnUseItemButtonClicked()
     {
         if (selectedSlotIndex < 0 || selectedSlotIndex >= slots.Count) return;
         var slot = slots[selectedSlotIndex];
 
-        if (slot.itemData == null || slot.itemData.itemType == ItemType.Equipment) return;
+        if (slot.itemData == null || slot.count <= 0 || slot.itemData.itemType == ItemType.Equipment) return;
 
-        // Tác dụng lên nhân vật (Ví dụ: Hồi máu, tăng sát thương)
         ApplyItemEffect(slot.itemData);
 
-        // Giảm số lượng item sau khi sử dụng (nếu không phải item vĩnh cửu như dao/súng đặc biệt)
         if (slot.itemData.itemType == ItemType.Consumable)
         {
             slot.count--;
@@ -176,6 +216,10 @@ public class InventoryManager : MonoBehaviour, IDragHandler, IEndDragHandler
                 slot.count = 0;
                 ClearDetailsPanel();
             }
+            else
+            {
+                RefreshSelectedDetails();
+            }
         }
 
         UpdateInventoryUI();
@@ -184,7 +228,6 @@ public class InventoryManager : MonoBehaviour, IDragHandler, IEndDragHandler
     void ApplyItemEffect(ItemData item)
     {
         Debug.Log($"Đã sử dụng {item.itemName}. Tác dụng: Hồi {item.healAmount} HP.");
-        // TODO: Gọi script nhân vật để cộng máu hoặc tăng chỉ số tại đây
     }
 
     void ClearDetailsPanel()
@@ -195,25 +238,149 @@ public class InventoryManager : MonoBehaviour, IDragHandler, IEndDragHandler
         if (btnUse != null) btnUse.gameObject.SetActive(false);
     }
 
-    // --- CƠ CHẾ KÉO THẢ VỨT ĐỒ RA NGOÀI MÀN HÌNH ---
+    // --- CƠ CHẾ KÉO THẢ (DRAG & DROP) & VỨT ĐỒ RA THẾ GIỚI ---
+
+    // Tìm xem con chuột đang ở ô slot nào dựa trên vị trí màn hình
+    private int GetSlotIndexUnderMouse(Vector2 screenPosition)
+    {
+        if (slotsContainer == null) return -1;
+
+        for (int i = 0; i < slotsContainer.childCount; i++)
+        {
+            RectTransform slotRect = slotsContainer.GetChild(i) as RectTransform;
+            if (slotRect != null && RectTransformUtility.RectangleContainsScreenPoint(slotRect, screenPosition, null))
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        draggedSlotIndex = GetSlotIndexUnderMouse(eventData.position);
+
+        if (draggedSlotIndex >= 0 && draggedSlotIndex < slots.Count && slots[draggedSlotIndex].itemData != null && slots[draggedSlotIndex].count > 0)
+        {
+            // Tạo bản sao icon đi theo chuột
+            if (canvasTransform != null)
+            {
+                draggedIconClone = new GameObject("DraggedIconClone");
+                draggedIconClone.transform.SetParent(canvasTransform, false);
+
+                Image cloneImage = draggedIconClone.AddComponent<Image>();
+                cloneImage.sprite = slots[draggedSlotIndex].itemData.itemIcon;
+                cloneImage.raycastTarget = false;
+
+                cloneCanvasGroup = draggedIconClone.AddComponent<CanvasGroup>();
+                cloneCanvasGroup.blocksRaycasts = false;
+
+                RectTransform cloneRect = draggedIconClone.GetComponent<RectTransform>();
+                cloneRect.sizeDelta = new Vector2(60, 60);
+                cloneRect.position = eventData.position;
+            }
+        }
+        else
+        {
+            draggedSlotIndex = -1;
+        }
+    }
+
     public void OnDrag(PointerEventData eventData)
     {
-        // Xử lý logic kéo icon vật phẩm nếu muốn hiển thị hình ảnh đang kéo
+        if (draggedIconClone != null)
+        {
+            RectTransform cloneRect = draggedIconClone.GetComponent<RectTransform>();
+            cloneRect.position = eventData.position;
+        }
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        // Kiểm tra nếu vị trí kết thúc kéo nằm NGOÀI khung inventoryPanelRect thì tiến hành vứt bỏ item
+        // Xóa bản sao icon kéo thả
+        if (draggedIconClone != null)
+        {
+            Destroy(draggedIconClone);
+        }
+
+        if (draggedSlotIndex < 0) return;
+
+        // 1. Kiểm tra xem có thả ra ngoài phạm vi Inventory panel không (Vứt ra thế giới)
         if (inventoryPanelRect != null && !RectTransformUtility.RectangleContainsScreenPoint(inventoryPanelRect, eventData.position, eventData.pressEventCamera))
         {
-            if (selectedSlotIndex >= 0 && selectedSlotIndex < slots.Count)
+            DropItemToWorld(draggedSlotIndex);
+            draggedSlotIndex = -1;
+            return;
+        }
+
+        // 2. Thả vào một ô slot khác bên trong Inventory (Đổi vị trí / Swap)
+        int targetSlotIndex = GetSlotIndexUnderMouse(eventData.position);
+        if (targetSlotIndex >= 0 && targetSlotIndex < slots.Count)
+        {
+            if (targetSlotIndex != draggedSlotIndex)
             {
-                Debug.Log($"Đã vứt vật phẩm {slots[selectedSlotIndex].itemData.itemName} ra ngoài màn hình Inventory!");
-                slots[selectedSlotIndex].itemData = null;
-                slots[selectedSlotIndex].count = 0;
-                ClearDetailsPanel();
+                // Thực hiện đổi chỗ hoặc chuyển đồ
+                InventorySlot sourceSlot = slots[draggedSlotIndex];
+                InventorySlot targetSlot = slots[targetSlotIndex];
+
+                // Nếu ô đích có đồ và cùng loại có thể stack được, cộng dồn số lượng
+                if (targetSlot.itemData == sourceSlot.itemData && targetSlot.itemData.itemType != ItemType.Equipment)
+                {
+                    int totalCount = targetSlot.count + sourceSlot.count;
+                    if (totalCount <= 99)
+                    {
+                        targetSlot.count = totalCount;
+                        sourceSlot.itemData = null;
+                        sourceSlot.count = 0;
+                    }
+                    else
+                    {
+                        targetSlot.count = 99;
+                        sourceSlot.count = totalCount - 99;
+                    }
+                }
+                else
+                {
+                    // Hoán đổi vị trí (Swap) cho nhau (kể cả ô đích trống hay có đồ khác)
+                    InventorySlot temp = new InventorySlot { itemData = targetSlot.itemData, count = targetSlot.count };
+                    targetSlot.itemData = sourceSlot.itemData;
+                    targetSlot.count = sourceSlot.count;
+                    
+                    sourceSlot.itemData = temp.itemData;
+                    sourceSlot.count = temp.count;
+                }
+
                 UpdateInventoryUI();
+                RefreshSelectedDetails();
             }
         }
+
+        draggedSlotIndex = -1;
+    }
+
+    // Sinh vật phẩm ra thế giới khi kéo vứt ra ngoài khung inventory
+    void DropItemToWorld(int slotIndex)
+    {
+        var slot = slots[slotIndex];
+        if (slot.itemData == null || slot.count <= 0) return;
+
+        Debug.Log($"Đã vứt vật phẩm {slot.itemData.itemName} (Số lượng: {slot.count}) ra ngoài thế giới!");
+
+        // TODO: Nếu bạn có Prefab rơi ngoài thế giới (ví dụ WorldItem Prefab chứa script nhặt đồ), hãy gán vào đây để Instantiate
+        // Ví dụ:
+        // if (worldItemPrefab != null)
+        // {
+        //     Vector3 dropPos = playerTransform != null ? playerTransform.position + playerTransform.forward * 2f : Vector3.zero;
+        //     GameObject droppedObj = Instantiate(worldItemPrefab, dropPos, Quaternion.identity);
+        //     // Truyền thông tin ItemData và count cho object vừa rơi
+        //     droppedObj.GetComponent<WorldItem>()?.Init(slot.itemData, slot.count);
+        // }
+
+        // Xóa item khỏi slot sau khi vứt
+        slot.itemData = null;
+        slot.count = 0;
+
+        UpdateInventoryUI();
+        ClearDetailsPanel();
     }
 }
