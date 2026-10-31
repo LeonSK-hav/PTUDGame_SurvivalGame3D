@@ -17,10 +17,11 @@ public class ZombieAI : MonoBehaviour
     public int currentHealth;
     public int maxHealth = 100;
 
-    [Header("UI Health Bar (Screen Space)")]
-    public GameObject healthUIPanel;        // Kéo GameObject Panel thanh máu trên UI chung vào đây
-    public Slider healthSlider;             // Slider thanh máu
-    public TextMeshProUGUI healthText;      // Text hiển thị số máu (vd: 100/100)
+    [Header("UI Health Bar Prefab")]
+    public GameObject healthUIPrefab;       // Kéo Prefab "ZombieHeathUI" vào đây
+    private GameObject instantiatedHealthUI;// Bản sao thanh máu riêng của con zombie này
+    private Slider healthSlider;            
+    private TextMeshProUGUI healthText;     
     public Vector3 headOffset = new Vector3(0, 2.2f, 0); // Khoảng cách từ gốc zombie lên đầu
 
     [Header("Combat")]
@@ -35,8 +36,8 @@ public class ZombieAI : MonoBehaviour
 
     bool dead;
     bool hit;
-    bool isHealthBarShown = false;
     private Camera mainCamera;
+    private Canvas mainCanvas;
 
     private void Start()
     {
@@ -48,13 +49,70 @@ public class ZombieAI : MonoBehaviour
 
         mainCamera = Camera.main;
 
-        // Ban đầu ẩn thanh máu đi
-        if (healthUIPanel != null)
+        // Tự động tìm Canvas chính trong Scene
+        Canvas[] canvases = FindObjectsOfType<Canvas>();
+        foreach (var canvas in canvases)
         {
-            healthUIPanel.SetActive(false);
+            if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            {
+                mainCanvas = canvas;
+                break;
+            }
         }
+        if (mainCanvas == null && canvases.Length > 0) mainCanvas = canvases[0];
 
-        UpdateHealthUI();
+        // Tự động sinh ra bản sao thanh máu
+        if (healthUIPrefab != null && mainCanvas != null)
+        {
+            // THÊM chữ 'false' vào cuối để giữ đúng hệ tọa độ cục bộ của UI Canvas
+            instantiatedHealthUI = Instantiate(healthUIPrefab, mainCanvas.transform, false);
+            
+            healthSlider = instantiatedHealthUI.GetComponentInChildren<Slider>();
+            healthText = instantiatedHealthUI.GetComponentInChildren<TextMeshProUGUI>();
+
+            instantiatedHealthUI.SetActive(false);
+            UpdateHealthUI();
+        }
+    }
+
+    // Dùng LateUpdate để ghim chuẩn xác thanh máu lên đầu Zombie
+    void LateUpdate()
+    {
+        if (instantiatedHealthUI != null && instantiatedHealthUI.activeSelf && mainCamera != null && mainCanvas != null)
+        {
+            // Lấy vị trí đỉnh đầu của Zombie trong không gian 3D
+            Vector3 worldPosition = transform.position + headOffset;
+            
+            // Chuyển đổi tọa độ 3D thành tọa độ màn hình (Screen Point)
+            Vector3 screenPosition = mainCamera.WorldToScreenPoint(worldPosition);
+
+            // Kiểm tra xem Zombie có đang ở trước mặt camera không
+            if (screenPosition.z > 0)
+            {
+                RectTransform rectTransform = instantiatedHealthUI.GetComponent<RectTransform>();
+                RectTransform canvasRect = mainCanvas.GetComponent<RectTransform>();
+
+                if (rectTransform != null && canvasRect != null)
+                {
+                    // Ép vị trí của thanh máu đi theo tọa độ local của Canvas chính một cách chính xác tuyệt đối
+                    Vector2 localPoint;
+                    RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                        canvasRect,
+                        screenPosition,
+                        null, // Truyền null vì Canvas là Screen Space - Overlay
+                        out localPoint
+                    );
+                    rectTransform.anchoredPosition = localPoint;
+                }
+
+                // Luôn giữ Scale bằng 1 để thanh máu không bị phóng to hay thu nhỏ bất thường
+                instantiatedHealthUI.transform.localScale = Vector3.one;
+            }
+            else
+            {
+                instantiatedHealthUI.SetActive(false);
+            }
+        }
     }
 
     void Update()
@@ -83,27 +141,7 @@ public class ZombieAI : MonoBehaviour
         }
     }
 
-    // Dùng LateUpdate để cập nhật vị trí thanh máu trên màn hình theo vị trí đầu của Zombie
-    void LateUpdate()
-    {
-        if (healthUIPanel != null && healthUIPanel.activeSelf && mainCamera != null)
-        {
-            // Lấy vị trí đỉnh đầu của zombie trong không gian 3D rồi chuyển sang tọa độ màn hình (Screen Point)
-            Vector3 worldPosition = transform.position + headOffset;
-            Vector3 screenPosition = mainCamera.WorldToScreenPoint(worldPosition);
-
-            // Kiểm tra xem zombie có đang ở trước mặt camera không (tránh hiển thị khi ở sau lưng)
-            if (screenPosition.z > 0)
-            {
-                healthUIPanel.transform.position = screenPosition;
-            }
-            else
-            {
-                // Nếu zombie ở sau lưng camera thì ẩn thanh máu đi
-                healthUIPanel.SetActive(false);
-            }
-        }
-    }
+    
 
     void Die()
     {
@@ -113,10 +151,10 @@ public class ZombieAI : MonoBehaviour
         agent.speed = 0;
         anim.SetBool("Death", true);
 
-        // Khi chết thì ẩn thanh máu đi
-        if (healthUIPanel != null)
+        // Khi chết (máu về 0), xóa luôn thanh máu riêng của zombie này
+        if (instantiatedHealthUI != null)
         {
-            healthUIPanel.SetActive(false);
+            Destroy(instantiatedHealthUI);
         }
 
         Destroy(gameObject, 5f);
@@ -129,14 +167,20 @@ public class ZombieAI : MonoBehaviour
         currentHealth -= Damage;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
 
-        // HIỂN THỊ THANH MÁU LẦN ĐẦU KHI NHẬN SÁT THƯƠNG
-        if (!isHealthBarShown && healthUIPanel != null)
+        // MỖI KHI BỊ GIẢM MÁU THÌ HIỆN THANH MÁU LÊN
+        if (instantiatedHealthUI != null)
         {
-            healthUIPanel.SetActive(true);
-            isHealthBarShown = true;
+            instantiatedHealthUI.SetActive(true);
         }
 
         UpdateHealthUI();
+
+        // Nếu máu về 0 thì gọi Die ngay
+        if (currentHealth <= 0 && !dead)
+        {
+            Die();
+            return;
+        }
 
         anim.SetTrigger("hit");
         StartCoroutine(HitDuration());
