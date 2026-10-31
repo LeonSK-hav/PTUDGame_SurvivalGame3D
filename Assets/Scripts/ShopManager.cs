@@ -2,6 +2,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [System.Serializable]
 public class ShopItem
@@ -20,6 +23,9 @@ public class ShopManager : MonoBehaviour
     [Header("Player Currency")]
     public int playerCoins = 1000;            // Số tiền hiện tại của người chơi
     public TextMeshProUGUI txtYourCoin;       // Hiển thị số tiền của player
+
+    [Header("Pricing Settings")]
+    public int defaultItemPrice = 20;         // Giá mặc định (mặc định là 20 nếu thiếu thông tin)
 
     [Header("Transaction UI")]
     public TextMeshProUGUI txtItemName;       // Tên vật phẩm đang chọn
@@ -55,6 +61,12 @@ public class ShopManager : MonoBehaviour
         if (btnBuy != null) btnBuy.onClick.AddListener(OnBuyItem);
         if (btnSell != null) btnSell.onClick.AddListener(OnSellItem);
 
+        // Nếu là Shop Mua và danh sách trống, tự động load ngẫu nhiên các Item từ thư mục Assets/Items
+        if (isBuyMode && (shopItems == null || shopItems.Count == 0))
+        {
+            LoadRandomItemsForBuyShop();
+        }
+
         // Nếu là Shop Bán, tự động đồng bộ danh sách từ Inventory khi bắt đầu
         if (!isBuyMode && inventoryManager != null)
         {
@@ -67,14 +79,58 @@ public class ShopManager : MonoBehaviour
         ClearDetails();
     }
 
-    // Làm sạch và sắp xếp lại danh sách: Loại bỏ các item hết hàng (stock <= 0) để dồn lên trên, tránh để trống ô
+    // --- HÀM LOAD ITEM TỪ THƯ MỤC Assets/Items CHO SHOP MUA (DÙNG GIÁ MẶC ĐỊNH HOẶC CÓ THỂ CHỈNH TRONG INSPECTOR) ---
+    public void LoadRandomItemsForBuyShop()
+    {
+        shopItems.Clear();
+#if UNITY_EDITOR
+        string[] guids = AssetDatabase.FindAssets("t:ItemData", new[] { "Assets/Items" });
+        List<ItemData> allLoadedItems = new List<ItemData>();
+
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            ItemData item = AssetDatabase.LoadAssetAtPath<ItemData>(path);
+            if (item != null)
+            {
+                allLoadedItems.Add(item);
+            }
+        }
+
+        int maxSlots = slotsContainer != null ? slotsContainer.childCount : 10;
+        
+        // Trộn ngẫu nhiên danh sách item
+        for (int i = 0; i < allLoadedItems.Count; i++)
+        {
+            ItemData temp = allLoadedItems[i];
+            int randomIndex = Random.Range(i, allLoadedItems.Count);
+            allLoadedItems[i] = allLoadedItems[randomIndex];
+            allLoadedItems[randomIndex] = temp;
+        }
+
+        int itemsToAddCount = Mathf.Min(maxSlots, allLoadedItems.Count);
+        for (int i = 0; i < itemsToAddCount; i++)
+        {
+            ItemData loadedItem = allLoadedItems[i];
+            int randomStock=Random.Range(0, 99);
+            shopItems.Add(new ShopItem
+            {
+                itemData = loadedItem,
+                price = defaultItemPrice > 0 ? defaultItemPrice : 20, // Lấy giá mặc định (mặc định là 20)
+                stock = randomStock // Số lượng tồn kho ban đầu
+            });
+        }
+#else
+        Debug.LogWarning("Load ngẫu nhiên từ thư mục Assets/Items chỉ hoạt động trong môi trường Unity Editor.");
+#endif
+    }
+
     public void CleanAndSortShopList()
     {
-        // Xóa bỏ các mục không hợp lệ hoặc hết hàng
         shopItems.RemoveAll(item => item == null || item.itemData == null || item.stock <= 0);
     }
 
-    // Đồng bộ danh sách từ Inventory qua Shop Bán
+    // Đồng bộ danh sách từ Inventory qua Shop Bán (Giá bán = 2/3 giá gốc hoặc giá mặc định)
     public void SyncShopItemsFromInventory()
     {
         shopItems.Clear();
@@ -84,7 +140,6 @@ public class ShopManager : MonoBehaviour
         {
             if (slot.itemData != null && slot.count > 0)
             {
-                // Kiểm tra xem đã có trong shopItems chưa để cộng dồn stock
                 var existingItem = shopItems.Find(x => x.itemData == slot.itemData);
                 if (existingItem != null)
                 {
@@ -92,10 +147,14 @@ public class ShopManager : MonoBehaviour
                 }
                 else
                 {
+                    // GIÁ BÁN RA = 2/3 CỦA GIÁ MẶC ĐỊNH (defaultItemPrice) HOẶC TỐI THIỂU LÀ 1
+                    int basePrice = defaultItemPrice > 0 ? defaultItemPrice : 20;
+                    int sellPrice = Mathf.Max(1, basePrice * 2 / 3);
+
                     shopItems.Add(new ShopItem
                     {
                         itemData = slot.itemData,
-                        price = 50, // Giá bán mặc định
+                        price = sellPrice, // Giá bán = 2/3
                         stock = slot.count
                     });
                 }
@@ -105,12 +164,11 @@ public class ShopManager : MonoBehaviour
         UpdateShopUI();
     }
 
-    // Cập nhật giao diện Shop và TỰ ĐỘNG ẨN CÁC Ô TRỐNG THỪA
     public void UpdateShopUI()
     {
         if (slotsContainer == null) return;
 
-        CleanAndSortShopList(); // Đảm bảo danh sách luôn gọn gàng trước khi vẽ UI
+        CleanAndSortShopList();
 
         for (int i = 0; i < slotsContainer.childCount; i++)
         {
@@ -122,10 +180,9 @@ public class ShopManager : MonoBehaviour
             Image imgItem = imgItemTransform != null ? imgItemTransform.GetComponent<Image>() : null;
             TextMeshProUGUI countText = txtCountTransform != null ? txtCountTransform.GetComponent<TextMeshProUGUI>() : null;
 
-            // Nếu ô này có sản phẩm trong danh sách đã dồn lên đầu
             if (i < shopItems.Count && shopItems[i].itemData != null && shopItems[i].stock > 0)
             {
-                slotTransform.gameObject.SetActive(true); // Hiển thị ô slot
+                slotTransform.gameObject.SetActive(true);
                 var item = shopItems[i];
 
                 if (imgItem != null)
@@ -142,7 +199,6 @@ public class ShopManager : MonoBehaviour
                     countText.text = item.stock > 1 ? item.stock.ToString() : "";
                 }
 
-                // Gán sự kiện click cho slot tương ứng
                 int index = i;
                 if (slotButton != null)
                 {
@@ -152,13 +208,11 @@ public class ShopManager : MonoBehaviour
             }
             else
             {
-                // ẨN HẲN CÁC Ô TRỐNG KHÔNG CÓ SẢN PHẨM HOẶC THỪA Ở PHÍA SAU
                 slotTransform.gameObject.SetActive(false);
             }
         }
     }
 
-    // Chọn sản phẩm trong Shop
     public void OnSelectShopSlot(int index)
     {
         if (index < 0 || index >= shopItems.Count || shopItems[index].itemData == null || shopItems[index].stock <= 0)
@@ -206,8 +260,16 @@ public class ShopManager : MonoBehaviour
         if (txtItemUsage != null) txtItemUsage.text = shopItem.itemData.itemUsageDescription;
         if (txtCount != null) txtCount.text = $"Quantity: {currentQuantity}";
 
-        int totalPrice = shopItem.price * currentQuantity;
-        if (txtPrice != null) txtPrice.text = totalPrice.ToString();
+        // Tính tổng tiền: Mua = Giá gốc * Số lượng; Bán = Giá bán (2/3) * Số lượng
+        int unitPrice = shopItem.price; // Nếu là shop bán, price ở đây đã được tính bằng 2/3 từ hàm Sync
+        int totalPrice = unitPrice * currentQuantity;
+
+        if (txtPrice != null)
+        {
+            // Hiển thị trực quan: Tổng số tiền giao dịch 
+            // (Bạn có thể tùy biến hiển thị thêm đơn giá nếu muốn, ví dụ: $"{totalPrice} (Đơn giá: {unitPrice})")
+            txtPrice.text = totalPrice.ToString();
+        }
 
         if (isBuyMode && btnBuy != null)
         {
@@ -249,7 +311,7 @@ public class ShopManager : MonoBehaviour
         currentQuantity = Mathf.Clamp(Mathf.RoundToInt(value), 1, maxQuantity);
         RefreshTransactionDetails();
     }
-    // Tự động đồng bộ danh sách khi Panel được bật lên (đặc biệt hữu ích khi chuyển đổi qua lại giữa Mua và Bán)
+
     void OnEnable()
     {
         if (!isBuyMode && inventoryManager != null)
@@ -258,13 +320,15 @@ public class ShopManager : MonoBehaviour
         }
         else
         {
+            // MỖI KHI MỞ GIAO DIỆN MUA (ISBUYMODE = TRUE), TỰ ĐỘNG LOAD VÀ RANDOM LẠI DANH SÁCH MỚI
+            LoadRandomItemsForBuyShop();
+
             CleanAndSortShopList();
             UpdateShopUI();
         }
         ClearDetails();
     }
 
-    // --- LOGIC MUA VẬT PHẨM ---
     public void OnBuyItem()
     {
         if (selectedIndex < 0 || selectedIndex >= shopItems.Count) return;
@@ -289,7 +353,6 @@ public class ShopManager : MonoBehaviour
 
         shopItem.stock -= currentQuantity;
 
-        // Nếu mua hết sạch, tự động xóa, dồn danh sách và ẩn ô trống
         if (shopItem.stock <= 0)
         {
             shopItems.RemoveAt(selectedIndex);
@@ -304,7 +367,6 @@ public class ShopManager : MonoBehaviour
         UpdateShopUI();
     }
 
-    // --- LOGIC BÁN VẬT PHẨM ---
     public void OnSellItem()
     {
         if (selectedIndex < 0 || selectedIndex >= shopItems.Count) return;
@@ -323,7 +385,6 @@ public class ShopManager : MonoBehaviour
 
         shopItem.stock -= currentQuantity;
 
-        // Nếu bán hết sạch, tự động xóa, dồn danh sách và ẩn ô trống
         if (shopItem.stock <= 0)
         {
             shopItems.RemoveAt(selectedIndex);
