@@ -13,22 +13,33 @@ public class PlayerHealth : MonoBehaviour
     [Header("Health Stats")]
     public float maxHP = 100f;
     private float currentHP;
+    private bool isDead;
+
+    private void Awake()
+    {
+        currentHP = Mathf.Max(0f, maxHP);
+    }
 
     void Start()
     {
-        currentHP = maxHP;
         UpdateHPUI();
+    }
+
+    public void TakeDamage(int amount)
+    {
+        TakeDamage((float)amount);
     }
 
     // Hàm nhận sát thương (Gọi hàm này khi bị zombie đánh trúng)
     public void TakeDamage(float damageAmount)
     {
-        currentHP -= damageAmount;
-        currentHP = Mathf.Clamp(currentHP, 0, maxHP); // Giới hạn máu từ 0 đến max
+        if (isDead || damageAmount <= 0f) return;
+
+        currentHP = Mathf.Max(0f, currentHP - damageAmount);
 
         UpdateHPUI();
 
-        if (currentHP <= 0)
+        if (currentHP <= 0f)
         {
             Die();
         }
@@ -47,7 +58,8 @@ public class PlayerHealth : MonoBehaviour
     {
         if (hpSlider != null)
         {
-            hpSlider.value = currentHP; // Thanh slider tự động co giãn theo giá trị
+            hpSlider.maxValue = maxHP;
+            hpSlider.value = currentHP;
         }
 
         if (hpText != null)
@@ -58,6 +70,9 @@ public class PlayerHealth : MonoBehaviour
 
     private void Die()
     {
+        if (isDead) return;
+
+        isDead = true;
         Debug.Log("Nhân vật đã ngã xuống trong vòng vây của zombie!");
         // Thêm logic Game Over ở đây
     }

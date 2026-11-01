@@ -2811,7 +2811,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 415400ba493f4034880efe8bcde8b723, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  target: {fileID: 1467966771}
+  target: {fileID: 557154381}
+  playerHealth: {fileID: 1717285907}
   Runner: 1
   walkSpeed: 2
   runSpeed: 3.5
@@ -2820,8 +2821,9 @@ MonoBehaviour:
   healthUIPrefab: {fileID: 122474678574262834, guid: 0d79d153e99299f4c9e2e990d73fe86f,
     type: 3}
   headOffset: {x: 1.7, y: 2.2, z: 0}
-  attackRange: 2
-  attackCooldown: 1
+  damageAmount: 10
+  attackDistance: 2
+  attackCooldown: 1.2
   hitDuration: 0.14
 --- !u!136 &108122257
 CapsuleCollider:
@@ -29056,7 +29058,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 415400ba493f4034880efe8bcde8b723, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  target: {fileID: 0}
+  target: {fileID: 557154381}
+  playerHealth: {fileID: 1717285907}
   Runner: 0
   walkSpeed: 2
   runSpeed: 3.5
@@ -29064,8 +29067,9 @@ MonoBehaviour:
   maxHealth: 100
   healthUIPrefab: {fileID: 0}
   headOffset: {x: 0, y: 2.2, z: 0}
-  attackRange: 2
-  attackCooldown: 1
+  damageAmount: 10
+  attackDistance: 2
+  attackCooldown: 1.2
   hitDuration: 0.4
 --- !u!114 &1150804768
 MonoBehaviour:

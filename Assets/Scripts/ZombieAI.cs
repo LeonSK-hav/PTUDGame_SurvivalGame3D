@@ -8,6 +8,7 @@ using TMPro;
 public class ZombieAI : MonoBehaviour
 {
     public Transform target;
+    public PlayerHealth playerHealth;
     public bool Runner = false;
 
     public float walkSpeed = 2f;
@@ -25,11 +26,12 @@ public class ZombieAI : MonoBehaviour
     public Vector3 headOffset = new Vector3(0, 2.2f, 0); // Khoảng cách từ gốc zombie lên đầu
 
     [Header("Combat")]
-    public float attackRange = 2f;
-    public float attackCooldown = 1f;
+    public int damageAmount = 10;
+    public float attackDistance = 2f;
+    public float attackCooldown = 1.2f;
     public float hitDuration = 0.4f;
 
-    float attackTime = 0f;
+    float nextAttackTime;
 
     private NavMeshAgent agent;
     Animator anim;
@@ -44,6 +46,25 @@ public class ZombieAI : MonoBehaviour
         currentHealth = maxHealth;
         anim = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
+        if (target == null)
+        {
+            Debug.LogError($"{name} requires a target Transform.", this);
+            enabled = false;
+            return;
+        }
+
+        if (playerHealth == null)
+        {
+            playerHealth = target.GetComponentInParent<PlayerHealth>();
+        }
+
+        if (playerHealth == null)
+        {
+            Debug.LogError($"{name} requires a PlayerHealth reference.", this);
+            enabled = false;
+            return;
+        }
+
         agent.SetDestination(target.position);
         agent.speed = Runner ? runSpeed : walkSpeed;
 
@@ -120,7 +141,7 @@ public class ZombieAI : MonoBehaviour
         if (dead) return;
         float distance = Vector3.Distance(transform.position, target.position);
 
-        if (distance > attackRange)
+        if (distance > attackDistance)
         {
             agent.isStopped = false;
             agent.SetDestination(target.position);
@@ -203,10 +224,11 @@ public class ZombieAI : MonoBehaviour
     void TryAttack()
     {
         if (hit || dead) return;
-        if (Time.time >= attackTime)
+        if (Time.time >= nextAttackTime)
         {
             anim.SetTrigger("Attack");
-            attackTime = Time.time + attackCooldown;
+            playerHealth.TakeDamage(damageAmount);
+            nextAttackTime = Time.time + Mathf.Max(0f, attackCooldown);
         }
     }
 
