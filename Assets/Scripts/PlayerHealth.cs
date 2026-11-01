@@ -80,6 +80,13 @@ public class PlayerHealth : MonoBehaviour
 
         isDead = true;
         Debug.Log("Nhân vật đã ngã xuống trong vòng vây của zombie!");
-        // Thêm logic Game Over ở đây
+        if (GameOverManager.Instance != null)
+        {
+            GameOverManager.Instance.ShowGameOver();
+        }
+        else
+        {
+            Debug.LogError("Không tìm thấy GameOverManager để hiển thị màn hình Game Over.", this);
+        }
     }
 }
