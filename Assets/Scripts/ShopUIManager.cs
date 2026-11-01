@@ -29,6 +29,10 @@ public class ShopUIManager : MonoBehaviour
         if (shopMainCanvas != null)
         {
             shopMainCanvas.SetActive(true);
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.SetUIOpen(shopMainCanvas, true);
+            }
         }
 
         // Mặc định hiển thị giao diện Mua trước tiên
@@ -41,6 +45,10 @@ public class ShopUIManager : MonoBehaviour
         if (shopMainCanvas != null)
         {
             shopMainCanvas.SetActive(false);
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.SetUIOpen(shopMainCanvas, false);
+            }
         }
     }
 

@@ -18,6 +18,12 @@ public class FPSCamere : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if ((UIManager.Instance != null && UIManager.Instance.IsGameplayInputBlocked) ||
+            Cursor.visible || Cursor.lockState != CursorLockMode.Locked)
+        {
+            return;
+        }
+
         Vector2 mouse = InputManager.Instance.playerInput.Player.Look.ReadValue<Vector2>();
 
         float mouseX = mouse.x * Senstivity * Time.deltaTime;

@@ -35,7 +35,13 @@ public class WeaponController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if(InputManager.Instance.playerInput.Player.Fire.WasPressedThisFrame() || InputManager.Instance.playerInput.Player.Fire.IsPressed())
+        bool gameplayInputBlocked =
+            (UIManager.Instance != null && UIManager.Instance.IsGameplayInputBlocked) ||
+            Cursor.visible || Cursor.lockState != CursorLockMode.Locked;
+
+        if (!gameplayInputBlocked &&
+            (InputManager.Instance.playerInput.Player.Fire.WasPressedThisFrame() ||
+             InputManager.Instance.playerInput.Player.Fire.IsPressed()))
         {
             if (!player.IsRunning)
             {
@@ -48,7 +54,7 @@ public class WeaponController : MonoBehaviour
             }
         }
 
-        if(Keyboard.current.rKey.wasPressedThisFrame)
+        if (!gameplayInputBlocked && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
         {
             currentBullets = BulletsInMag;
         }
