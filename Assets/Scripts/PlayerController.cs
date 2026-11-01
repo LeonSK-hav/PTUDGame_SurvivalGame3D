@@ -25,6 +25,11 @@ public class PlayerController : MonoBehaviour
 
         controller = GetComponent<CharacterController>();
         moveSpeed = walkSpeed;
+
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.SetGameplayCursor();
+        }
     }
 
     // Update is called once per frame

@@ -34,6 +34,22 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
     private GameObject draggedIconClone;         // Bản sao icon đi theo chuột khi kéo
     private CanvasGroup cloneCanvasGroup;
     
+    private void OnEnable()
+    {
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.SetUIOpen(gameObject, true);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.SetUIOpen(gameObject, false);
+        }
+    }
+
     void Start()
     {
         // Khởi tạo hoặc làm sạch danh sách slots để tránh bị nhân đôi / lệch index
