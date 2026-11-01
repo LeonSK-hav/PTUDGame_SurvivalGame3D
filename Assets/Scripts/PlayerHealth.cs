@@ -7,46 +7,25 @@ using TMPro;
 public class PlayerHealth : MonoBehaviour
 {
     [Header("UI Components")]
-    public Slider hpSlider;          
-    public TextMeshProUGUI hpText;   
+    public Slider hpSlider;          // Kéo Slider HP_Bar vào đây
+    public TextMeshProUGUI hpText;   // (Tùy chọn) Text hiển thị số máu dạng chữ
 
     [Header("Health Stats")]
     public float maxHP = 100f;
     private float currentHP;
 
-    private PlayerStats playerStats; 
-
     void Start()
     {
-        playerStats = GetComponent<PlayerStats>();
-        if (playerStats != null)
-        {
-            maxHP = playerStats.currentMaxHp; // Lấy Max HP chính xác từ PlayerStats
-        }
-
-        currentHP = maxHP; // Gán đầy máu khi bắt đầu
+        currentHP = maxHP;
         UpdateHPUI();
     }
 
-    void Update()
-    {
-        // Đồng bộ Max HP nếu có sự thay đổi từ trang bị
-        if (playerStats != null)
-        {
-            if (maxHP != playerStats.currentMaxHp)
-            {
-                float oldMaxHP = maxHP;
-                maxHP = playerStats.currentMaxHp;
-                currentHP = Mathf.Clamp(currentHP + (maxHP - oldMaxHP), 0, maxHP);
-                UpdateHPUI();
-            }
-        }
-    }
-
+    // Hàm nhận sát thương (Gọi hàm này khi bị zombie đánh trúng)
     public void TakeDamage(float damageAmount)
     {
         currentHP -= damageAmount;
-        currentHP = Mathf.Clamp(currentHP, 0, maxHP); 
+        currentHP = Mathf.Clamp(currentHP, 0, maxHP); // Giới hạn máu từ 0 đến max
+
         UpdateHPUI();
 
         if (currentHP <= 0)
@@ -55,6 +34,7 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
+    // Hàm hồi máu
     public void Heal(float healAmount)
     {
         currentHP += healAmount;
@@ -62,12 +42,12 @@ public class PlayerHealth : MonoBehaviour
         UpdateHPUI();
     }
 
+    // Cập nhật hiển thị lên giao diện
     private void UpdateHPUI()
     {
         if (hpSlider != null)
         {
-            hpSlider.maxValue = maxHP;     
-            hpSlider.value = currentHP;    
+            hpSlider.value = currentHP; // Thanh slider tự động co giãn theo giá trị
         }
 
         if (hpText != null)
@@ -79,5 +59,6 @@ public class PlayerHealth : MonoBehaviour
     private void Die()
     {
         Debug.Log("Nhân vật đã ngã xuống trong vòng vây của zombie!");
+        // Thêm logic Game Over ở đây
     }
 }
