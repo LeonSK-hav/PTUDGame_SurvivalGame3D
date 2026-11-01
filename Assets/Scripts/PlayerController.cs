@@ -11,6 +11,7 @@ public class PlayerController : MonoBehaviour
 
     public bool IsWalking;
     public bool IsRunning;
+    public PlayerStamina stamina;
     Vector2 moveInput;
     bool running;
 
@@ -36,24 +37,17 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         Vector3 moveDirection = transform.right * moveInput.x + transform.forward * moveInput.y;
-        if (running == true)
+        bool isMoving = moveInput.sqrMagnitude > 0.0001f;
+        bool canRun = isMoving && running;
+
+        if (stamina != null)
         {
-            moveSpeed = runSpeed;
+            canRun = stamina.UpdateStamina(isMoving, running);
         }
-        else
-        {
-            moveSpeed = walkSpeed;
-        }
-        if(controller.velocity.magnitude > 0.01f)
-        {
-            IsWalking = moveSpeed == walkSpeed;
-            IsRunning = moveSpeed == runSpeed;
-        }
-        else
-        {
-            IsWalking = false;
-            IsRunning = false;
-        }
+
+        moveSpeed = canRun ? runSpeed : walkSpeed;
+        IsWalking = isMoving && !canRun;
+        IsRunning = canRun;
         controller.Move(moveDirection.normalized * moveSpeed * Time.deltaTime);
     }
 
