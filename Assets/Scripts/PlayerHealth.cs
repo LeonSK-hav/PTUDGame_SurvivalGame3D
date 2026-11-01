@@ -15,9 +15,14 @@ public class PlayerHealth : MonoBehaviour
     private float currentHP;
     private bool isDead;
 
+    public float CurrentHealth => currentHP;
+    public float MaxHealth => maxHP;
+    public bool CanHeal => !isDead && currentHP < maxHP;
+
     private void Awake()
     {
-        currentHP = Mathf.Max(0f, maxHP);
+        maxHP = Mathf.Max(0f, maxHP);
+        currentHP = maxHP;
     }
 
     void Start()
@@ -48,8 +53,9 @@ public class PlayerHealth : MonoBehaviour
     // Hàm hồi máu
     public void Heal(float healAmount)
     {
-        currentHP += healAmount;
-        currentHP = Mathf.Clamp(currentHP, 0, maxHP);
+        if (isDead || healAmount <= 0f) return;
+
+        currentHP = Mathf.Min(currentHP + healAmount, maxHP);
         UpdateHPUI();
     }
 

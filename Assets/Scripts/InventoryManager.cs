@@ -29,6 +29,9 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
     [Header("World Drop Settings")]
     public Transform playerTransform;            // Vị trí người chơi để sinh vật phẩm ra thế giới
 
+    [Header("Player References")]
+    public PlayerHealth playerHealth;
+
     private int selectedSlotIndex = -1;          // Ô đang được chọn để xem chi tiết
     private int draggedSlotIndex = -1;           // Ô đang bị kéo chuột
     private GameObject draggedIconClone;         // Bản sao icon đi theo chuột khi kéo
@@ -106,6 +109,16 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         if (canvasTransform == null)
         {
             canvasTransform = FindObjectOfType<Canvas>()?.transform;
+        }
+
+        if (playerHealth == null && playerTransform != null)
+        {
+            playerHealth = playerTransform.GetComponentInParent<PlayerHealth>();
+        }
+
+        if (playerHealth == null)
+        {
+            playerHealth = FindFirstObjectByType<PlayerHealth>();
         }
 
         UpdateInventoryUI();
@@ -274,7 +287,7 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
         if (slot.itemData == null || slot.count <= 0 || slot.itemData.itemType == ItemType.Equipment) return;
 
-        ApplyItemEffect(slot.itemData);
+        if (!ApplyItemEffect(slot.itemData)) return;
 
         if (slot.itemData.itemType == ItemType.Consumable)
         {
@@ -294,9 +307,27 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         UpdateInventoryUI();
     }
 
-    void ApplyItemEffect(ItemData item)
+    bool ApplyItemEffect(ItemData item)
     {
+        if (item.healAmount > 0f)
+        {
+            if (playerHealth == null)
+            {
+                Debug.LogError("Không tìm thấy PlayerHealth để sử dụng vật phẩm hồi máu.", this);
+                return false;
+            }
+
+            if (!playerHealth.CanHeal)
+            {
+                Debug.Log("Máu của Player đã đầy, không thể sử dụng vật phẩm hồi máu.");
+                return false;
+            }
+
+            playerHealth.Heal(item.healAmount);
+        }
+
         Debug.Log($"Đã sử dụng {item.itemName}. Tác dụng: Hồi {item.healAmount} HP.");
+        return true;
     }
 
     void ClearDetailsPanel()

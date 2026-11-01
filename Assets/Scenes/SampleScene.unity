@@ -16534,6 +16534,7 @@ MonoBehaviour:
   totalSlots: 35
   slots: []
   playerTransform: {fileID: 557154381}
+  playerHealth: {fileID: 1717285907}
 --- !u!1 &628876640
 GameObject:
   m_ObjectHideFlags: 0
