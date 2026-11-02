@@ -1,7 +1,8 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Collections.Generic;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -19,10 +20,7 @@ public class ShopManager : MonoBehaviour
     [Header("References")]
     public InventoryManager inventoryManager; // Tham chiếu tới Inventory của player
     public Transform slotsContainer;          // Chứa các btnSlot trong Panel cửa hàng
-
-    [Header("Player Currency")]
-    public int playerCoins = 1000;            // Số tiền hiện tại của người chơi
-    public TextMeshProUGUI txtYourCoin;       // Hiển thị số tiền của player
+    public GameObject player;                 // Tham chiếu tới Player trong Scene (chứa PlayerStats)
 
     [Header("Pricing Settings")]
     public int defaultItemPrice = 20;         // Giá mặc định (mặc định là 20 nếu thiếu thông tin)
@@ -32,6 +30,9 @@ public class ShopManager : MonoBehaviour
     public TextMeshProUGUI txtItemUsage;      // Mô tả công dụng
     public TextMeshProUGUI txtPrice;          // Tổng giá tiền thanh toán
     public TextMeshProUGUI txtCount;          // Hiển thị dạng "Quantity: X"
+    public TextMeshProUGUI txtYourCoin;       // Hiển thị số tiền của player (lấy từ PlayerStats)
+    public TextMeshProUGUI txtYourCoinMain;       // Hiển thị số tiền của player (lấy từ PlayerStats)
+
     public Button btnAdd;                     // Tăng số lượng
     public Button btnMinus;                   // Giảm số lượng
     public Slider quantitySlider;             // Slider điều chỉnh số lượng
@@ -44,12 +45,45 @@ public class ShopManager : MonoBehaviour
     [Header("Shop Inventory Data")]
     public List<ShopItem> shopItems = new List<ShopItem>();
 
-    private int selectedIndex = -1;           
-    private int currentQuantity = 1;          
-    private int maxQuantity = 1;              
-    
+    private int selectedIndex = -1;             
+    private int currentQuantity = 1;            
+    private int maxQuantity = 1;                
+
+    // Thuộc tính phụ trợ giúp lấy và gán tiền trực tiếp từ PlayerStats một cách an toàn
+    private int PlayerCoins
+    {
+        get
+        {
+            if (player != null)
+            {
+                PlayerStats stats = player.GetComponent<PlayerStats>();
+                if (stats != null) return stats.coins; // Giả định biến tiền trong PlayerStats tên là coins
+            }
+            return 0;
+        }
+        set
+        {
+            if (player != null)
+            {
+                PlayerStats stats = player.GetComponent<PlayerStats>();
+                if (stats != null)
+                {
+                    stats.coins = value;
+                    // Nếu PlayerStats có hàm cập nhật UI tiền riêng, có thể gọi ở đây
+                }
+            }
+        }
+    }
+
     void Start()
     {
+        // Tự động tìm Player nếu chưa kéo vào Inspector
+        if (player == null)
+        {
+            GameObject foundPlayer = GameObject.FindGameObjectWithTag("Player");
+            if (foundPlayer != null) player = foundPlayer;
+        }
+
         if (btnAdd != null) btnAdd.onClick.AddListener(OnAddButtonClicked);
         if (btnMinus != null) btnMinus.onClick.AddListener(OnMinusButtonClicked);
 
@@ -79,7 +113,6 @@ public class ShopManager : MonoBehaviour
         ClearDetails();
     }
 
-    // --- HÀM LOAD ITEM TỪ THƯ MỤC Assets/Items CHO SHOP MUA (DÙNG GIÁ MẶC ĐỊNH HOẶC CÓ THỂ CHỈNH TRONG INSPECTOR) ---
     public void LoadRandomItemsForBuyShop()
     {
         shopItems.Clear();
@@ -112,12 +145,12 @@ public class ShopManager : MonoBehaviour
         for (int i = 0; i < itemsToAddCount; i++)
         {
             ItemData loadedItem = allLoadedItems[i];
-            int randomStock=Random.Range(0, 99);
+            int randomStock = Random.Range(1, 99);
             shopItems.Add(new ShopItem
             {
                 itemData = loadedItem,
-                price = defaultItemPrice > 0 ? defaultItemPrice : 20, // Lấy giá mặc định (mặc định là 20)
-                stock = randomStock // Số lượng tồn kho ban đầu
+                price = defaultItemPrice > 0 ? defaultItemPrice : 20,
+                stock = randomStock
             });
         }
 #else
@@ -130,7 +163,6 @@ public class ShopManager : MonoBehaviour
         shopItems.RemoveAll(item => item == null || item.itemData == null || item.stock <= 0);
     }
 
-    // Đồng bộ danh sách từ Inventory qua Shop Bán (Giá bán = 2/3 giá gốc hoặc giá mặc định)
     public void SyncShopItemsFromInventory()
     {
         shopItems.Clear();
@@ -147,14 +179,13 @@ public class ShopManager : MonoBehaviour
                 }
                 else
                 {
-                    // GIÁ BÁN RA = 2/3 CỦA GIÁ MẶC ĐỊNH (defaultItemPrice) HOẶC TỐI THIỂU LÀ 1
                     int basePrice = defaultItemPrice > 0 ? defaultItemPrice : 20;
                     int sellPrice = Mathf.Max(1, basePrice * 2 / 3);
 
                     shopItems.Add(new ShopItem
                     {
                         itemData = slot.itemData,
-                        price = sellPrice, // Giá bán = 2/3
+                        price = sellPrice,
                         stock = slot.count
                     });
                 }
@@ -226,7 +257,7 @@ public class ShopManager : MonoBehaviour
 
         if (isBuyMode)
         {
-            int affordableCount = shopItem.price > 0 ? playerCoins / shopItem.price : 99;
+            int affordableCount = shopItem.price > 0 ? PlayerCoins / shopItem.price : 99;
             maxQuantity = Mathf.Max(1, Mathf.Min(shopItem.stock, affordableCount));
         }
         else
@@ -260,21 +291,18 @@ public class ShopManager : MonoBehaviour
         if (txtItemUsage != null) txtItemUsage.text = shopItem.itemData.itemUsageDescription;
         if (txtCount != null) txtCount.text = $"Quantity: {currentQuantity}";
 
-        // Tính tổng tiền: Mua = Giá gốc * Số lượng; Bán = Giá bán (2/3) * Số lượng
-        int unitPrice = shopItem.price; // Nếu là shop bán, price ở đây đã được tính bằng 2/3 từ hàm Sync
+        int unitPrice = shopItem.price;
         int totalPrice = unitPrice * currentQuantity;
 
         if (txtPrice != null)
         {
-            // Hiển thị trực quan: Tổng số tiền giao dịch 
-            // (Bạn có thể tùy biến hiển thị thêm đơn giá nếu muốn, ví dụ: $"{totalPrice} (Đơn giá: {unitPrice})")
             txtPrice.text = totalPrice.ToString();
         }
 
         if (isBuyMode && btnBuy != null)
         {
             btnBuy.gameObject.SetActive(true);
-            btnBuy.interactable = (playerCoins >= totalPrice && currentQuantity <= shopItem.stock);
+            btnBuy.interactable = (PlayerCoins >= totalPrice && currentQuantity <= shopItem.stock);
         }
         else if (!isBuyMode && btnSell != null)
         {
@@ -314,18 +342,23 @@ public class ShopManager : MonoBehaviour
 
     void OnEnable()
     {
+        if (player == null)
+        {
+            GameObject foundPlayer = GameObject.FindGameObjectWithTag("Player");
+            if (foundPlayer != null) player = foundPlayer;
+        }
+
         if (!isBuyMode && inventoryManager != null)
         {
             SyncShopItemsFromInventory();
         }
         else
         {
-            // MỖI KHI MỞ GIAO DIỆN MUA (ISBUYMODE = TRUE), TỰ ĐỘNG LOAD VÀ RANDOM LẠI DANH SÁCH MỚI
             LoadRandomItemsForBuyShop();
-
             CleanAndSortShopList();
             UpdateShopUI();
         }
+        UpdateCoinUI();
         ClearDetails();
     }
 
@@ -335,7 +368,7 @@ public class ShopManager : MonoBehaviour
         var shopItem = shopItems[selectedIndex];
         int totalPrice = shopItem.price * currentQuantity;
 
-        if (playerCoins < totalPrice)
+        if (PlayerCoins < totalPrice)
         {
             Debug.Log("Không đủ tiền!");
             return;
@@ -348,7 +381,8 @@ public class ShopManager : MonoBehaviour
             return;
         }
 
-        playerCoins -= totalPrice;
+        // Trừ trực tiếp tiền vào PlayerStats thông qua thuộc tính chung
+        PlayerCoins -= totalPrice;
         UpdateCoinUI();
 
         shopItem.stock -= currentQuantity;
@@ -380,7 +414,8 @@ public class ShopManager : MonoBehaviour
             return;
         }
 
-        playerCoins += totalEarnings;
+        // Cộng trực tiếp tiền vào PlayerStats thông qua thuộc tính chung
+        PlayerCoins += totalEarnings;
         UpdateCoinUI();
 
         shopItem.stock -= currentQuantity;
@@ -434,14 +469,15 @@ public class ShopManager : MonoBehaviour
 
     void UpdateCoinUI()
     {
-        if (txtYourCoin != null) txtYourCoin.text = playerCoins.ToString();
+        if (txtYourCoin != null) txtYourCoin.text = PlayerCoins.ToString();
+        if (txtYourCoinMain != null) txtYourCoinMain.text = PlayerCoins.ToString();
     }
 
     void ClearDetails()
     {
         selectedIndex = -1;
         if (txtItemName != null) txtItemName.text = "";
-        if (txtItemUsage != null) txtItemUsage.text = "";
+        if        (txtItemUsage != null) txtItemUsage.text = "";
         if (txtPrice != null) txtPrice.text = "0";
         if (txtCount != null) txtCount.text = "";
         if (quantitySlider != null) { quantitySlider.minValue = 1; quantitySlider.maxValue = 1; quantitySlider.value = 1; }

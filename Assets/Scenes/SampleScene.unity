@@ -15061,6 +15061,8 @@ GameObject:
   - component: {fileID: 2010000012}
   - component: {fileID: 2010000014}
   - component: {fileID: 2010000013}
+  - component: {fileID: 2010000015}
+  - component: {fileID: 2010000016}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -18274,13 +18276,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   inventoryManager: {fileID: 625704017}
   slotsContainer: {fileID: 529781459}
-  playerCoins: 1000
-  txtYourCoin: {fileID: 1594689678}
+  player: {fileID: 557154376}
   defaultItemPrice: 20
   txtItemName: {fileID: 1607541283}
   txtItemUsage: {fileID: 2100969393}
   txtPrice: {fileID: 1462130469}
   txtCount: {fileID: 1580111605}
+  txtYourCoin: {fileID: 1594689678}
+  txtYourCoinMain: {fileID: 1313931880}
   btnAdd: {fileID: 401816865}
   btnMinus: {fileID: 2028523643}
   quantitySlider: {fileID: 511999790}
@@ -40761,13 +40764,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   inventoryManager: {fileID: 625704017}
   slotsContainer: {fileID: 548925074}
-  playerCoins: 1000
-  txtYourCoin: {fileID: 1814088326}
+  player: {fileID: 557154376}
   defaultItemPrice: 20
   txtItemName: {fileID: 1365362832}
   txtItemUsage: {fileID: 520443762}
   txtPrice: {fileID: 1268828055}
   txtCount: {fileID: 1696247776}
+  txtYourCoin: {fileID: 1814088326}
+  txtYourCoinMain: {fileID: 1313931880}
   btnAdd: {fileID: 298488107}
   btnMinus: {fileID: 1584794488}
   quantitySlider: {fileID: 389344563}
@@ -52544,13 +52548,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerName: PlayerName
-  level: 1
-  currentExp: 0
-  expToNextLevel: 100
-  expSlider: {fileID: 0}
-  expText: {fileID: 0}
-  nameText: {fileID: 0}
-  levelText: {fileID: 0}
+  nameText: {fileID: 1562676076}
+  coinText: {fileID: 1313931880}
+  coins: 1000
   baseMaxHp: 100
   baseDamage: 10
   baseDefense: 5
@@ -52601,6 +52601,39 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &2010000015
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 557154376}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56183c04675b5b44e9b7723cc33c2375, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  level: 1
+  currentExp: 0
+  expToNextLevel: 100
+  expSlider: {fileID: 141877802}
+  expText: {fileID: 283423881}
+  levelText: {fileID: 599105627}
+--- !u!114 &2010000016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 557154376}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1ade5308b9ae144e9e4e05f6c56fb22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hpSlider: {fileID: 1717285906}
+  hpText: {fileID: 1174623388}
+  maxHP: 100
 --- !u!1 &2010662520
 GameObject:
   m_ObjectHideFlags: 0
@@ -52796,9 +52829,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 1273932415}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e27a84fc1f6b4d809f53b4c6a9d17203, type: 3}
+  m_Script: {fileID: 11500000, guid: 670f8aba89c785e4ca71753e3019149d, type: 3}
   m_Name: GameOverManager
   m_EditorClassIdentifier: GameOverManager
+  maxStamina: 100
+  currentStamina: 100
+  drainRate: 20
+  regenRate: 15
+  regenDelay: 1
+  staminaSlider: {fileID: 877098975}
+  staminaText: {fileID: 1904273109}
 --- !u!1 &2028523640
 GameObject:
   m_ObjectHideFlags: 0

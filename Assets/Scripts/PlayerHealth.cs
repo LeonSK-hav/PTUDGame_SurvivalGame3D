@@ -18,16 +18,47 @@ public class PlayerHealth : MonoBehaviour
     public float CurrentHealth => currentHP;
     public float MaxHealth => maxHP;
     public bool CanHeal => !isDead && currentHP < maxHP;
+    private PlayerStats playerStats;
 
     private void Awake()
     {
-        maxHP = Mathf.Max(0f, maxHP);
-        currentHP = maxHP;
+        playerStats = GetComponent<PlayerStats>();
     }
 
     void Start()
     {
+        if (playerStats != null)
+        {
+            // Lấy máu tối đa từ PlayerStats ban đầu
+            maxHP = playerStats.currentMaxHp;
+            currentHP = maxHP;
+        }
+        else
+        {
+            currentHP = maxHP;
+        }
         UpdateHPUI();
+    }
+
+    // Hàm đồng bộ và cập nhật lại máu tối đa từ PlayerStats (Gọi khi trang bị đồ hoặc lên cấp)
+    public void SyncMaxHealth()
+    {
+        if (playerStats != null)
+        {
+            float oldMaxHP = maxHP;
+            maxHP = playerStats.currentMaxHp;
+
+            // Nếu máu tối đa tăng/giảm, có thể cộng dồn hoặc giữ nguyên tỷ lệ % máu hiện tại
+            // Ở đây ta cộng thêm phần chênh lệch máu tối đa cho currentHP (giống cơ chế hồi máu khi nâng max HP)
+            float hpDifference = maxHP - oldMaxHP;
+            if (hpDifference > 0)
+            {
+                currentHP += hpDifference; // Tăng thêm lượng máu chênh lệch khi max HP tăng
+            }
+            
+            currentHP = Mathf.Clamp(currentHP, 0f, maxHP);
+            UpdateHPUI();
+        }
     }
 
     public void TakeDamage(int amount)
