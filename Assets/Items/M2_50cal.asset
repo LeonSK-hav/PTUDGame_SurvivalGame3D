@@ -15,7 +15,7 @@ MonoBehaviour:
   itemName: M2_50cal
   itemIcon: {fileID: 21300000, guid: 220bba6a6c605f942b24773b402c23f1, type: 3}
   itemType: 0
-  worldItemPrefab: {fileID: 1156375666866002, guid: 3077a2b322d12b94c975bb1c7b2993fb,
+  worldItemPrefab: {fileID: 1147902190469559417, guid: 8fcbfc9cbf8e7054580f1f7a93c876cb,
     type: 3}
   healAmount: 25
   damageBonus: 0

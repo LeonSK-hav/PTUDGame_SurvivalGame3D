@@ -15,7 +15,7 @@ MonoBehaviour:
   itemName: RGD-5
   itemIcon: {fileID: 21300000, guid: a52344d46b8ae0b449ed9f606a687257, type: 3}
   itemType: 0
-  worldItemPrefab: {fileID: 1698056052845220, guid: 5a2bf64643e1fb0439ea39c0fc9b00ff,
+  worldItemPrefab: {fileID: 6931004445599502021, guid: 7336682714f27834ea6510fa9ccd2dea,
     type: 3}
   healAmount: 25
   damageBonus: 0

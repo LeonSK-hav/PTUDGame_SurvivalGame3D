@@ -13,7 +13,7 @@ public class ItemGenerator
         string iconFolderPath = "Assets/GeneratedIcons"; 
         string itemOutputFolder = "Assets/Items";
         // Thư mục chứa các Prefab 3D của bạn (hãy đổi đường dẫn nếu cần)
-        string prefabFolderPath = "Assets/ForPlayer/Low Poly Weapons VOL.1/Prefabs"; // Hoặc thư mục chứa prefab của bạn
+        string prefabFolderPath = "Assets/Prefab"; // Hoặc thư mục chứa prefab của bạn
         //string prefabFolderPath = "Assets/ForEnviroment/Polygon-Lite Survival Collection/Prefabs"; // Hoặc thư mục chứa prefab của bạn
        //string prefabFolderPath = "Assets/ForPlayer/SSG_Guns_Pack_01_Demo/Prefabs"; // Thư mục chứa prefab của bạn
         if (!AssetDatabase.IsValidFolder(itemOutputFolder))

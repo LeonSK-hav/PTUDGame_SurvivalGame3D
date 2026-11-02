@@ -15,7 +15,7 @@ MonoBehaviour:
   itemName: ANPEQ15
   itemIcon: {fileID: 21300000, guid: 2bf0fd43020133b4784b06db1120f72e, type: 3}
   itemType: 0
-  worldItemPrefab: {fileID: 1461378829341170, guid: 0c4a58b408c72d141bb4ae5633ef3744,
+  worldItemPrefab: {fileID: 7214775115111247115, guid: d058e925290fb544e80e333353be3314,
     type: 3}
   healAmount: 25
   damageBonus: 0

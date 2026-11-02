@@ -15,7 +15,7 @@ MonoBehaviour:
   itemName: M4_8
   itemIcon: {fileID: 21300000, guid: 54f33ce1498943746922dffae9d18c1b, type: 3}
   itemType: 0
-  worldItemPrefab: {fileID: 1117582899397640, guid: 689946d975a0e55449b1e7ae41933e73,
+  worldItemPrefab: {fileID: 2551176346034180491, guid: 510dc6e008f60d74b93570344746f01f,
     type: 3}
   healAmount: 25
   damageBonus: 0

@@ -15,7 +15,7 @@ MonoBehaviour:
   itemName: M107
   itemIcon: {fileID: 21300000, guid: 8bc349c331c06a34da2c2d6bbceb8c88, type: 3}
   itemType: 0
-  worldItemPrefab: {fileID: 1829597508155286, guid: 7359baf27e84aa44cafac3788c8be0f1,
+  worldItemPrefab: {fileID: 9116395035140714124, guid: 53f13c800d4ff824d91807e0d9a496f0,
     type: 3}
   healAmount: 25
   damageBonus: 0

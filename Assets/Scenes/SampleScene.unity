@@ -2572,7 +2572,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   inventoryManager: {fileID: 625704017}
-  samplePotion: {fileID: 0}
+  samplePotion: {fileID: 11400000, guid: 33bdf4160b4efee4ebe72864aa4b1fe1, type: 2}
 --- !u!4 &96788833
 Transform:
   m_ObjectHideFlags: 0
@@ -15059,6 +15059,8 @@ GameObject:
   - component: {fileID: 557154383}
   - component: {fileID: 557154382}
   - component: {fileID: 2010000012}
+  - component: {fileID: 2010000014}
+  - component: {fileID: 2010000013}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -15075,7 +15077,7 @@ Transform:
   m_GameObject: {fileID: 557154376}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 11.28, y: 1, z: 7.66}
+  m_LocalPosition: {x: 11.28, y: 1.08, z: 7.66}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -52557,6 +52559,48 @@ MonoBehaviour:
   currentDamage: 0
   currentDefense: 0
   currentAgility: 0
+--- !u!65 &2010000013
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 557154376}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 5, y: 5, z: 5}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!65 &2010000014
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 557154376}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &2010662520
 GameObject:
   m_ObjectHideFlags: 0

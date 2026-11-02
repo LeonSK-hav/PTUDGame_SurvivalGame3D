@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 6507963288776316447}
   - component: {fileID: 6491868427768375648}
   - component: {fileID: -3031777129404597557}
-  - component: {fileID: 8775358207407986947}
+  - component: {fileID: 516805870987301127}
   m_Layer: 0
   m_Name: WorldItem_Prefab
   m_TagString: Untagged
@@ -51,11 +51,11 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.4, y: 0.4, z: 0.4}
+  m_Size: {x: 0.5, y: 0.5, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!54 &6507963288776316447
 Rigidbody:
@@ -98,8 +98,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemData: {fileID: 0}
   count: 1
-  spriteRenderer: {fileID: -3031777129404597557}
-  worldCountText: {fileID: 0}
+  pullSpeed: 12
+  pickupRange: 1.5
 --- !u!212 &-3031777129404597557
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -154,7 +154,7 @@ SpriteRenderer:
   m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!65 &8775358207407986947
+--- !u!65 &516805870987301127
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

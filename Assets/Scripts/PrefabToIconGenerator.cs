@@ -7,21 +7,25 @@ using System.IO;
 
 public class PrefabToIconGenerator : MonoBehaviour
 {
-    [MenuItem("Tools/Tạo Icon 2D (Hoàn chỉnh, không bị cắt)")]
-    public static void GenerateIcons()
+    [MenuItem("Tools/Tạo Icon & Tự Động Thêm Component Vật Lý Cho Prefab")]
+    public static void GenerateIconsAndPhysics()
     {
-         // Thư mục chứa các Prefab 3D của bạn (hãy đổi đường dẫn nếu cần)
-        string prefabFolderPath = "Assets/ForPlayer/Low Poly Weapons VOL.1/Prefabs"; // Hoặc thư mục chứa prefab của bạn
-        //string prefabFolderPath = "Assets/ForEnviroment/Polygon-Lite Survival Collection/Prefabs"; // Hoặc thư mục chứa prefab của bạn
-       //string prefabFolderPath = "Assets/ForPlayer/SSG_Guns_Pack_01_Demo/Prefabs"; // Thư mục chứa prefab của bạn
+        // Thư mục chứa các Prefab 3D của bạn
+        string prefabFolderPath = "Assets/ForPlayer/Low Poly Weapons VOL.1/Prefabs"; 
         string outputFolder = "Assets/GeneratedIcons";
+        string worldItemPrefabFolder = "Assets/Prefab"; // Thư mục lưu prefab dùng ngoài thế giới sau khi đã được gắn vật lý
 
         if (!AssetDatabase.IsValidFolder(outputFolder))
         {
             AssetDatabase.CreateFolder("Assets", "GeneratedIcons");
         }
 
-        // Tạo Camera ẩn
+        if (!AssetDatabase.IsValidFolder(worldItemPrefabFolder))
+        {
+            AssetDatabase.CreateFolder("Assets", "Prefab");
+        }
+
+        // Tạo Camera ẩn để chụp icon
         GameObject camObj = new GameObject("IconCaptureCamera");
         Camera capCam = camObj.AddComponent<Camera>();
         capCam.clearFlags = CameraClearFlags.SolidColor;
@@ -39,10 +43,9 @@ public class PrefabToIconGenerator : MonoBehaviour
 
             if (prefab != null)
             {
-                // Sinh bản thể tạm
+                // 1. SINH BẢN THỂ TẠM ĐỂ CHỤP ICON VÀ TÍNH TOÁN KÍCH THƯỚC
                 GameObject objInstance = Instantiate(prefab, Vector3.zero, Quaternion.identity);
 
-                // Lọc các MeshRenderer chính, bỏ qua các vật thể quá khổ (địa hình thừa)
                 MeshRenderer[] renderers = objInstance.GetComponentsInChildren<MeshRenderer>();
                 Bounds mainBounds = new Bounds(Vector3.zero, Vector3.zero);
                 bool initialized = false;
@@ -64,20 +67,17 @@ public class PrefabToIconGenerator : MonoBehaviour
 
                 if (!initialized) mainBounds = new Bounds(objInstance.transform.position, Vector3.one);
 
+                // --- CHỤP ẢNH ICON 2D ---
                 Vector3 center = mainBounds.center;
                 float maxDimension = Mathf.Max(mainBounds.size.x, mainBounds.size.y, mainBounds.size.z);
                 
-                // --- ĐIỀU CHỈNH KHOẢNG CÁCH VÀ GÓC NHÌN AN TOÀN ---
                 float distance = maxDimension * 2.5f + 1.0f;
                 Vector3 offset = new Vector3(distance * 0.6f, distance * 0.35f, -distance * 0.6f);
                 
                 capCam.transform.position = center + offset;
                 capCam.transform.LookAt(center);
-                
-                // TĂNG KÍCH THƯỚC KHUNG NHÌN LÊN ĐỂ KHÔNG BỊ CẮT LẸM CẠNH
                 capCam.orthographicSize = (maxDimension * 0.7f); 
 
-                // Render và chụp ảnh
                 RenderTexture rt = new RenderTexture(256, 256, 24);
                 capCam.targetTexture = rt;
                 Texture2D screenShot = new Texture2D(256, 256, TextureFormat.RGBA32, false);
@@ -87,13 +87,76 @@ public class PrefabToIconGenerator : MonoBehaviour
                 screenShot.ReadPixels(new Rect(0, 0, 256, 256), 0, 0);
                 screenShot.Apply();
 
-                // Lưu file PNG
                 byte[] bytes = screenShot.EncodeToPNG();
                 string savePath = $"{outputFolder}/{prefab.name}.png";
                 File.WriteAllBytes(savePath, bytes);
 
-                DestroyImmediate(objInstance);
                 DestroyImmediate(rt);
+
+                // --- 2. TỰ ĐỘNG BỔ SUNG RIGIDBODY, 2 BOX COLLIDER VÀ SCRIPT WORLDITEM CHO PREFAB ---
+                
+                // Thêm Rigidbody
+                Rigidbody rb = objInstance.GetComponent<Rigidbody>();
+                if (rb == null)
+                {
+                    rb = objInstance.AddComponent<Rigidbody>();
+                }
+                rb.useGravity = true;
+                rb.isKinematic = false;
+
+                // --- BOX COLLIDER 1: Dùng để va chạm cứng với mặt đất (Không phải Trigger) ---
+                // Lấy tất cả BoxCollider trên object, tìm cái nào không phải trigger hoặc tạo mới
+                BoxCollider solidCollider = null;
+                BoxCollider[] existingColliders = objInstance.GetComponents<BoxCollider>();
+                foreach (var col in existingColliders)
+                {
+                    if (!col.isTrigger)
+                    {
+                        solidCollider = col;
+                        break;
+                    }
+                }
+
+                if (solidCollider == null)
+                {
+                    solidCollider = objInstance.AddComponent<BoxCollider>();
+                }
+                solidCollider.isTrigger = false; 
+                solidCollider.center = objInstance.transform.InverseTransformPoint(mainBounds.center);
+                solidCollider.size = mainBounds.size;
+
+                // --- BOX COLLIDER 2: Dùng làm vùng Trigger lớn để dò/hút vật phẩm từ xa ---
+                BoxCollider triggerCollider = null;
+                foreach (var col in existingColliders)
+                {
+                    if (col.isTrigger && col != solidCollider)
+                    {
+                        triggerCollider = col;
+                        break;
+                    }
+                }
+
+                if (triggerCollider == null)
+                {
+                    triggerCollider = objInstance.AddComponent<BoxCollider>();
+                }
+                triggerCollider.isTrigger = true; // Bật chế độ Trigger để dò khoảng cách
+                triggerCollider.center = solidCollider.center;
+                // Phóng to kích thước lên gấp nhiều lần so với vật thể (ví dụ: nhân bản kính thước lên 3 hoặc 4 lần để làm vùng quét rộng)
+                triggerCollider.size = mainBounds.size * 3.5f; 
+
+                // Gắn luôn script WorldItem để sẵn sàng nhặt đồ
+                WorldItem worldItemScript = objInstance.GetComponent<WorldItem>();
+                if (worldItemScript == null)
+                {
+                    objInstance.AddComponent<WorldItem>();
+                }
+
+                // Lưu bản thể này thành một Prefab hoàn chỉnh trong thư mục Assets/Prefab
+                string worldItemPrefabPath = $"{worldItemPrefabFolder}/{prefab.name}.prefab";
+                PrefabUtility.SaveAsPrefabAsset(objInstance, worldItemPrefabPath);
+
+                DestroyImmediate(objInstance);
             }
         }
 
@@ -102,7 +165,7 @@ public class PrefabToIconGenerator : MonoBehaviour
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("Đã tạo lại toàn bộ icon trọn vẹn, không bị cắt lẹm!");
+        Debug.Log("Đã hoàn tất: Tạo Icon 2D VÀ tự động gán Rigidbody, 1 Box Collider cứng để đứng đất + 1 Box Collider Trigger lớn để dò vật phẩm từ xa!");
     }
 }
 #endif

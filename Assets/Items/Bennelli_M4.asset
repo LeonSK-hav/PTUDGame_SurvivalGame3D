@@ -15,7 +15,7 @@ MonoBehaviour:
   itemName: Bennelli_M4
   itemIcon: {fileID: 21300000, guid: 4eca51714cf3b8241b1b693b35ab6dba, type: 3}
   itemType: 0
-  worldItemPrefab: {fileID: 1236257789494122, guid: 8b0b86b42def11849a8eba21f4a6a684,
+  worldItemPrefab: {fileID: 8866954407875113486, guid: aabb59abb7d5900489da2b87cbc96157,
     type: 3}
   healAmount: 25
   damageBonus: 0

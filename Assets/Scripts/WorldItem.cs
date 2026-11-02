@@ -1,7 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using TMPro;
 
 public class WorldItem : MonoBehaviour
 {
@@ -9,29 +6,36 @@ public class WorldItem : MonoBehaviour
     public ItemData itemData;
     public int count = 1;
 
-    [Header("UI / Visual References")]
-    public SpriteRenderer spriteRenderer; // Nếu muốn hiển thị icon 2D bay lơ lửng
-    public TextMeshProUGUI worldCountText; // (Tùy chọn) Hiển thị số lượng trên đầu vật phẩm
+    [Header("Settings")]
+    public float pullSpeed = 12f; // Tốc độ hút item khi đến gần
+    public float pickupRange = 1.5f; // Khoảng cách đủ gần để cộng vào kho
 
     private bool canBePickedUp = false;
+    private bool isBeingPulled = false;
+    private Transform playerTransform;
+    
+    private Rigidbody rb;
+    private Collider itemCollider;
 
-    // Hàm khởi tạo thông tin cho vật phẩm khi được vứt ra từ Inventory
+    void Start()
+    {
+        rb = GetComponent<Rigidbody>();
+        itemCollider = GetComponent<Collider>();
+
+        // Tự động tìm Player dựa trên Tag "Player" trong Scene
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj != null)
+        {
+            playerTransform = playerObj.transform;
+        }
+    }
+
     public void Init(ItemData data, int amount)
     {
         itemData = data;
         count = amount;
-
-        if (spriteRenderer != null && itemData != null)
-        {
-            spriteRenderer.sprite = itemData.itemIcon;
-        }
-
-        if (worldCountText != null)
-        {
-            worldCountText.text = count > 1 ? count.ToString() : "";
-        }
-
-        // Đợi một chút mới cho phép nhặt (tránh việc vừa vứt ra ngay chân player đã bị nhặt lại lập tức)
+        
+        // Đợi 0.5 giây để vật phẩm kịp rơi xuống mặt đất ổn định rồi mới cho phép nhặt
         Invoke(nameof(EnablePickup), 0.5f);
     }
 
@@ -40,28 +44,63 @@ public class WorldItem : MonoBehaviour
         canBePickedUp = true;
     }
 
-    // Xử lý khi người chơi chạm vào vật phẩm để nhặt
-    private void OnTriggerEnter(Collider other)
+    void Update()
     {
-        if (!canBePickedUp) return;
+        if (!canBePickedUp || playerTransform == null) return;
 
-        // Kiểm tra xem đối tượng va chạm có phải là Player không (dựa vào Tag hoặc Component)
-        if (other.CompareTag("Player") || other.GetComponent<PlayerStats>() != null)
+        // Tính khoảng cách từ vật phẩm đến người chơi
+        float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
+
+        // Nếu người chơi đến gần trong phạm vi hút (ví dụ: 5 mét)
+        if (distanceToPlayer <= 5f)
         {
-            // Tìm InventoryManager trong scene để thêm item vào kho
-            InventoryManager inventory = FindFirstObjectByType<InventoryManager>();
-            if (inventory != null)
+            isBeingPulled = true;
+        }
+       /*
+        // Nếu đang trong trạng thái bị hút, bay thẳng về phía người chơi
+        if (isBeingPulled)
+        {
+            // Tắt trọng lực để item bay mượt mà không bị rơi xuống nữa
+            if (rb != null)
             {
-                bool success = inventory.AddItem(itemData, count);
-                if (success)
-                {
-                    Debug.Log($"Đã nhặt lại {itemData.itemName} (Số lượng: {count})");
-                    Destroy(gameObject); // Xóa vật phẩm dưới đất sau khi nhặt thành công
-                }
-                else
-                {
-                    Debug.Log("Inventory đã đầy, không thể nhặt thêm!");
-                }
+                rb.useGravity = false;
+                rb.isKinematic = true;
+            }
+            if (itemCollider != null)
+            {
+                itemCollider.isTrigger = true; // Chuyển thành trigger để bay xuyên qua mọi thứ
+            }
+
+            // Di chuyển item về phía player
+            transform.position = Vector3.MoveTowards(transform.position, playerTransform.position + Vector3.up * 1f, pullSpeed * Time.deltaTime);
+
+            // Khi bay đến sát sạt người chơi thì tiến hành nhặt vào kho và xóa object
+            if (distanceToPlayer <= pickupRange)
+            {
+                TryPickUp();
+            }
+        }*/
+    }
+
+    // Phòng hờ trường hợp va chạm trực tiếp (nếu có collider cứng)
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (canBePickedUp && (collision.gameObject.CompareTag("Player") || collision.gameObject.GetComponent<CharacterController>() != null))
+        {
+            TryPickUp();
+        }
+    }
+
+    void TryPickUp()
+    {
+        InventoryManager inventory = FindFirstObjectByType<InventoryManager>();
+        if (inventory != null)
+        {
+            bool success = inventory.AddItem(itemData, count);
+            if (success)
+            {
+                Debug.Log($"Đã nhặt thành công: {itemData.itemName}");
+                Destroy(gameObject);
             }
         }
     }
