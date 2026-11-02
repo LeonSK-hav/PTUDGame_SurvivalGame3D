@@ -69,11 +69,11 @@ public class ItemGenerator
                         
                         // Thông tin mặc định
                         newItem.itemType = ItemType.Consumable; 
-                        newItem.itemUsageDescription = $"Vật phẩm sinh tồn: {itemName}.";
                         newItem.maxStack = 99;                  
                         newItem.healAmount = 25f;               
                         newItem.damageBonus = 0f;               
-
+                        newItem.defenseBonus = 0f;
+                        newItem.agilityBonus = 0f;
                         AssetDatabase.CreateAsset(newItem, assetPath);
                         Debug.Log($"Đã tạo thành công Item: {itemName}");
                     }

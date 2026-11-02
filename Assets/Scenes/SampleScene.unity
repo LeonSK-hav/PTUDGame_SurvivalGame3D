@@ -2923,7 +2923,7 @@ PrefabInstance:
     - target: {fileID: 6660184903045082040, guid: 970a0e0414fa8be4695cbe8c3d95afd7,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -15061,7 +15061,7 @@ GameObject:
   - component: {fileID: 2010000012}
   m_Layer: 3
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -15099,7 +15099,7 @@ MonoBehaviour:
   runSpeed: 8
   IsWalking: 0
   IsRunning: 0
-  stamina: {fileID: 2010000012}
+  stamina: {fileID: 0}
 --- !u!143 &557154383
 CharacterController:
   m_ObjectHideFlags: 0
@@ -17049,8 +17049,12 @@ MonoBehaviour:
   inventoryPanelRect: {fileID: 483217923}
   canvasTransform: {fileID: 625704013}
   totalSlots: 35
-  slots: []
+  slots:
+  - itemData: {fileID: 11400000, guid: 014ae8643662acf41b96d33c974257fa, type: 2}
+    count: 1
   playerTransform: {fileID: 557154381}
+  worldItemPrefab: {fileID: 4326444041072580206, guid: 37dabac58f583414e9329996e9b8fcc8,
+    type: 3}
   playerHealth: {fileID: 1717285907}
 --- !u!1 &628876640
 GameObject:
@@ -52534,16 +52538,25 @@ MonoBehaviour:
   m_GameObject: {fileID: 557154376}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1c6384c4a0df4238b411e63e2972e8fa, type: 3}
+  m_Script: {fileID: 11500000, guid: 66d4b8de992667b46bba188705401431, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxStamina: 100
-  currentStamina: 100
-  drainRate: 20
-  regenRate: 15
-  regenDelay: 1
-  staminaSlider: {fileID: 877098975}
-  staminaText: {fileID: 1904273109}
+  playerName: PlayerName
+  level: 1
+  currentExp: 0
+  expToNextLevel: 100
+  expSlider: {fileID: 0}
+  expText: {fileID: 0}
+  nameText: {fileID: 0}
+  levelText: {fileID: 0}
+  baseMaxHp: 100
+  baseDamage: 10
+  baseDefense: 5
+  baseAgility: 10
+  currentMaxHp: 0
+  currentDamage: 0
+  currentDefense: 0
+  currentAgility: 0
 --- !u!1 &2010662520
 GameObject:
   m_ObjectHideFlags: 0
@@ -52742,16 +52755,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e27a84fc1f6b4d809f53b4c6a9d17203, type: 3}
   m_Name: GameOverManager
   m_EditorClassIdentifier: GameOverManager
-  gameOverPanel: {fileID: 501794690}
-  quoteText: {fileID: 1380320783}
-  mainMenuScene: StartScene
-  quotes:
-  - "Ki\u1EBFp n\xE0y b\u1EA1n ch\u01B0a \u0111\u1EE7 tr\xECnh r\u1ED3i, ki\u1EBFp
-    sau l\xE0m l\u1EA1i nh\xE9!"
-  - "Zombie b\u1EA3o: \"Th\u1ECBt ngon \u0111\u1EA5y, l\xE0m v\xE1n n\u1EEFa kh\xF4ng
-    bro?\""
-  - "T\u01B0\u1EDFng th\u1EBF n\xE0o, l\xE0m b\u1EEFa t\u1ED1i cho Zombie r\u1ED3i
-    \U0001F602"
 --- !u!1 &2028523640
 GameObject:
   m_ObjectHideFlags: 0

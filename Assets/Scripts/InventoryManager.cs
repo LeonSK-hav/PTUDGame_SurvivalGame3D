@@ -28,6 +28,7 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
     [Header("World Drop Settings")]
     public Transform playerTransform;            // Vị trí người chơi để sinh vật phẩm ra thế giới
+    public GameObject worldItemPrefab;          // Kéo Prefab WorldItem vừa tạo ở Bước 1 vào đây!
 
     [Header("Player References")]
     public PlayerHealth playerHealth;
@@ -458,6 +459,7 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         draggedSlotIndex = -1;
     }
 
+
     // Sinh vật phẩm ra thế giới khi kéo vứt ra ngoài khung inventory
     void DropItemToWorld(int slotIndex)
     {
@@ -466,15 +468,26 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
         Debug.Log($"Đã vứt vật phẩm {slot.itemData.itemName} (Số lượng: {slot.count}) ra ngoài thế giới!");
 
-        // TODO: Nếu bạn có Prefab rơi ngoài thế giới (ví dụ WorldItem Prefab chứa script nhặt đồ), hãy gán vào đây để Instantiate
-        // Ví dụ:
-        // if (worldItemPrefab != null)
-        // {
-        //     Vector3 dropPos = playerTransform != null ? playerTransform.position + playerTransform.forward * 2f : Vector3.zero;
-        //     GameObject droppedObj = Instantiate(worldItemPrefab, dropPos, Quaternion.identity);
-        //     // Truyền thông tin ItemData và count cho object vừa rơi
-        //     droppedObj.GetComponent<WorldItem>()?.Init(slot.itemData, slot.count);
-        // }
+        // Kiểm tra nếu đã gán Prefab vứt đồ ngoài thế giới
+        if (worldItemPrefab != null)
+        {
+            Vector3 dropPos = playerTransform != null 
+    ? playerTransform.position + playerTransform.forward * 2f + Vector3.up * 1.5f 
+    : transform.position;
+
+            GameObject droppedObj = Instantiate(worldItemPrefab, dropPos, Quaternion.identity);
+            
+            // Truyền thông tin ItemData và count cho object vừa rơi
+            WorldItem worldItemComp = droppedObj.GetComponent<WorldItem>();
+            if (worldItemComp != null)
+            {
+                worldItemComp.Init(slot.itemData, slot.count);
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Chưa gán World Item Prefab trong InventoryManager Inspector!");
+        }
 
         // Xóa item khỏi slot sau khi vứt
         slot.itemData = null;
