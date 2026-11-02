@@ -10,6 +10,8 @@ public class ItemData : ScriptableObject
     public string itemName;
     public Sprite itemIcon;
     public ItemType itemType; // Consumable (đồ ăn, thuốc, đạn), Permanent (súng, dao dùng vĩnh cửu), Equipment (quần áo, mũ)
+    [Header("World Prefab")]
+    public GameObject worldItemPrefab; // Prefab hiển thị dưới mặt đất khi vứt vật phẩm này ra thế giới
     [TextArea]
     
     [Header("Stats Effect")]

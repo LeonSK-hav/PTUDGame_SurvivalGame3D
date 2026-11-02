@@ -15,7 +15,10 @@ MonoBehaviour:
   itemName: RPG7
   itemIcon: {fileID: 21300000, guid: 6debb27e89ac915459182b87037f8b12, type: 3}
   itemType: 0
-  itemUsageDescription: "V\u1EADt ph\u1EA9m sinh t\u1ED3n: RPG7."
+  worldItemPrefab: {fileID: 1411512464560164, guid: 02baef62b1bfedf40bb369fb7542b9e7,
+    type: 3}
   healAmount: 25
   damageBonus: 0
+  defenseBonus: 0
+  agilityBonus: 0
   maxStack: 99

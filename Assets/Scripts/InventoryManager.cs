@@ -468,14 +468,16 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
         Debug.Log($"Đã vứt vật phẩm {slot.itemData.itemName} (Số lượng: {slot.count}) ra ngoài thế giới!");
 
-        // Kiểm tra nếu đã gán Prefab vứt đồ ngoài thế giới
-        if (worldItemPrefab != null)
+        // Ưu tiên lấy prefab riêng của từng ItemData, nếu không có thì dùng prefab chung của InventoryManager
+        GameObject prefabToSpawn = slot.itemData.worldItemPrefab != null ? slot.itemData.worldItemPrefab : worldItemPrefab;
+
+        if (prefabToSpawn != null)
         {
             Vector3 dropPos = playerTransform != null 
-    ? playerTransform.position + playerTransform.forward * 2f + Vector3.up * 1.5f 
-    : transform.position;
+                ? playerTransform.position + playerTransform.forward * 2f + Vector3.up * 1.5f 
+                : transform.position;
 
-            GameObject droppedObj = Instantiate(worldItemPrefab, dropPos, Quaternion.identity);
+            GameObject droppedObj = Instantiate(prefabToSpawn, dropPos, Quaternion.identity);
             
             // Truyền thông tin ItemData và count cho object vừa rơi
             WorldItem worldItemComp = droppedObj.GetComponent<WorldItem>();
@@ -486,7 +488,7 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         }
         else
         {
-            Debug.LogWarning("Chưa gán World Item Prefab trong InventoryManager Inspector!");
+            Debug.LogWarning("Chưa gán World Item Prefab (cả ở ItemData lẫn InventoryManager Inspector)!");
         }
 
         // Xóa item khỏi slot sau khi vứt

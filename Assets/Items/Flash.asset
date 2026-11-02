@@ -15,7 +15,10 @@ MonoBehaviour:
   itemName: Flash
   itemIcon: {fileID: 21300000, guid: ac425f1268689f841b049ef6069f8ac3, type: 3}
   itemType: 0
-  itemUsageDescription: "V\u1EADt ph\u1EA9m sinh t\u1ED3n: Flash."
+  worldItemPrefab: {fileID: 1516097666562846, guid: c0f110e4459b675489b7db1e686d5bc3,
+    type: 3}
   healAmount: 25
   damageBonus: 0
+  defenseBonus: 0
+  agilityBonus: 0
   maxStack: 99

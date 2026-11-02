@@ -15,7 +15,10 @@ MonoBehaviour:
   itemName: M1911
   itemIcon: {fileID: 21300000, guid: b90ef84725163c846b0a53d1ce3ab0a2, type: 3}
   itemType: 0
-  itemUsageDescription: "V\u1EADt ph\u1EA9m sinh t\u1ED3n: M1911."
+  worldItemPrefab: {fileID: 1694449805434718, guid: 6f1a7354265853f44b0ed5e2e43676ad,
+    type: 3}
   healAmount: 25
   damageBonus: 0
+  defenseBonus: 0
+  agilityBonus: 0
   maxStack: 99

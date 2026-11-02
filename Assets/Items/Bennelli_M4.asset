@@ -15,7 +15,10 @@ MonoBehaviour:
   itemName: Bennelli_M4
   itemIcon: {fileID: 21300000, guid: 4eca51714cf3b8241b1b693b35ab6dba, type: 3}
   itemType: 0
-  itemUsageDescription: "V\u1EADt ph\u1EA9m sinh t\u1ED3n: Bennelli_M4."
+  worldItemPrefab: {fileID: 1236257789494122, guid: 8b0b86b42def11849a8eba21f4a6a684,
+    type: 3}
   healAmount: 25
   damageBonus: 0
+  defenseBonus: 0
+  agilityBonus: 0
   maxStack: 99
