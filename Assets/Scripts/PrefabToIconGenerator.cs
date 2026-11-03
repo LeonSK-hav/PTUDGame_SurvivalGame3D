@@ -11,7 +11,9 @@ public class PrefabToIconGenerator : MonoBehaviour
     public static void GenerateIconsAndPhysics()
     {
         // Thư mục chứa các Prefab 3D của bạn
-        string prefabFolderPath = "Assets/ForPlayer/Low Poly Weapons VOL.1/Prefabs"; 
+        //string prefabFolderPath = "Assets/ForPlayer/Low Poly Weapons VOL.1/Prefabs"; 
+        //string prefabFolderPath = "Assets/ForEnviroment/Polygon-Lite Survival Collection/Prefabs"; // Hoặc thư mục chứa prefab của bạn
+       string prefabFolderPath = "Assets/ForPlayer/SSG_Guns_Pack_01_Demo/Prefabs"; // Thư mục chứa prefab của bạn
         string outputFolder = "Assets/GeneratedIcons";
         string worldItemPrefabFolder = "Assets/Prefab"; // Thư mục lưu prefab dùng ngoài thế giới sau khi đã được gắn vật lý
 

@@ -33,6 +33,7 @@ public class AudioManager : MonoBehaviour
     private void Start()
     {
         LoadVolumeSettings();
+        PlayMusic(musicSource.clip, true); // Phát nhạc nền khi bắt đầu
     }
 
     // Phát âm thanh hiệu ứng 2D (như nhặt đồ, click button, tiếng súng)
@@ -40,7 +41,19 @@ public class AudioManager : MonoBehaviour
     {
         if (clip != null && effectSource != null)
         {
-            effectSource.PlayOneShot(clip, volumeScale);
+           // effectSource.PlayOneShot(clip, volumeScale);
+           effectSource.Stop(); // Dừng âm thanh cũ ngay lập tức
+        effectSource.clip = clip;
+        effectSource.volume = volumeScale;
+        effectSource.Play(); // Phát âm thanh mới từ đầu
+        }
+    }
+    public void StopEffectSound()
+    {
+        if (effectSource != null)
+        {
+           effectSource.Stop(); // Dừng âm thanh cũ ngay lập tức
+       
         }
     }
 

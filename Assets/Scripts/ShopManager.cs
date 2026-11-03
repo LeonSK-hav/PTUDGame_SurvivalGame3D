@@ -149,7 +149,7 @@ public class ShopManager : MonoBehaviour
             shopItems.Add(new ShopItem
             {
                 itemData = loadedItem,
-                price = defaultItemPrice > 0 ? defaultItemPrice : 20,
+                price = loadedItem.Price > 0 ? loadedItem.Price : defaultItemPrice, // Nếu item có giá > 0 thì dùng giá đó, nếu không thì dùng defaultItemPrice
                 stock = randomStock
             });
         }

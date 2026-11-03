@@ -15,10 +15,15 @@ MonoBehaviour:
   itemName: M1911
   itemIcon: {fileID: 21300000, guid: b90ef84725163c846b0a53d1ce3ab0a2, type: 3}
   itemType: 0
+  Price: 500
+  equipmentType: 1
+  requiredLevel: 2
+  scope: 8
+  ammoType: 1
   worldItemPrefab: {fileID: 2130311712418556323, guid: b63bfe39cb7e0c048b8301ef740f25fd,
     type: 3}
-  healAmount: 25
-  damageBonus: 0
+  healAmount: 0
+  damageBonus: 40
   defenseBonus: 0
   agilityBonus: 0
-  maxStack: 99
+  maxStack: 1

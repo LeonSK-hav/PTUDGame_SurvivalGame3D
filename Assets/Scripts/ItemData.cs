@@ -16,10 +16,11 @@ public class ItemData : ScriptableObject
     public string itemName;
     public Sprite itemIcon;
     public ItemType itemType; // Consumable (đồ ăn, thuốc, đạn), Permanent (súng, dao dùng vĩnh cửu), Equipment (quần áo, mũ)
-    
+    public int Price; // Giá trị mua/bán của vật phẩm
     [Header("Equipment & Usage Requirements")]
     public EquipmentType equipmentType; // Phân loại trang bị chi tiết (Vũ khí, Mũ, Áo, Quần, Giày,...)
     public int requiredLevel = 1;       // Cấp độ tối thiểu yêu cầu để sử dụng trang bị/vật phẩm này
+    public float scope;                 // Phạm vi tác động (dùng cho vũ khí có phạm vi)
 
     [Header("Ammo Settings (Dùng cho Súng hoặc Đạn)")]
     public AmmoType ammoType;           // Loại đạn mà súng sử dụng HOẶC loại đạn của chính item đạn đó

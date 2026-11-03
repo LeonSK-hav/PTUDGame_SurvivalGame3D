@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb981fb946f80d144856cc34461552e7, type: 3}
+  m_Name: SM_Camping_Axe
+  m_EditorClassIdentifier: 
+  itemName: SM_Camping_Axe
+  itemIcon: {fileID: 21300000, guid: 59af73e47b681aa4182d6a386de6d9eb, type: 3}
+  itemType: 0
+  Price: 300
+  equipmentType: 1
+  requiredLevel: 2
+  scope: 4
+  ammoType: 0
+  worldItemPrefab: {fileID: 7308891417073916295, guid: a0c31576f4b09264fb3b3785d9aa8488,
+    type: 3}
+  healAmount: 30
+  damageBonus: 30
+  defenseBonus: 0
+  agilityBonus: 0
+  maxStack: 1

@@ -15,10 +15,15 @@ MonoBehaviour:
   itemName: M249
   itemIcon: {fileID: 21300000, guid: 9d09751aa60b9b04aa62510a2d466722, type: 3}
   itemType: 0
+  Price: 500
+  equipmentType: 1
+  requiredLevel: 2
+  scope: 8
+  ammoType: 1
   worldItemPrefab: {fileID: 2857035868403261084, guid: f9caf8ca15c79b24ea875fc947ff47c1,
     type: 3}
-  healAmount: 25
-  damageBonus: 0
+  healAmount: 0
+  damageBonus: 40
   defenseBonus: 0
   agilityBonus: 0
-  maxStack: 99
+  maxStack: 1

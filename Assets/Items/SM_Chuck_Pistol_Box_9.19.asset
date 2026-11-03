@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb981fb946f80d144856cc34461552e7, type: 3}
+  m_Name: SM_Chuck_Pistol_Box_9.19
+  m_EditorClassIdentifier: 
+  itemName: SM_Chuck_Pistol_Box_9.19
+  itemIcon: {fileID: 21300000, guid: 3be10d3c97f24ba43b061e55e8369c3c, type: 3}
+  itemType: 0
+  Price: 30
+  equipmentType: 0
+  requiredLevel: 1
+  scope: 0
+  ammoType: 1
+  worldItemPrefab: {fileID: 6110133714899382464, guid: df50af51993b8b841b5bb53615d08bc7,
+    type: 3}
+  healAmount: 0
+  damageBonus: 0
+  defenseBonus: 0
+  agilityBonus: 0
+  maxStack: 99

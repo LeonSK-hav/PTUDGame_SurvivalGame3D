@@ -2908,7 +2908,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   inventoryManager: {fileID: 625704017}
-  samplePotion: {fileID: 11400000, guid: 33bdf4160b4efee4ebe72864aa4b1fe1, type: 2}
+  samplePotion: {fileID: 0}
 --- !u!4 &96788833
 Transform:
   m_ObjectHideFlags: 0
@@ -3797,6 +3797,63 @@ ParticleSystem:
     type: 3}
   m_PrefabInstance: {fileID: 1771333082}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &136685688
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 136685690}
+  - component: {fileID: 136685691}
+  m_Layer: 0
+  m_Name: InventoryManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &136685690
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 136685688}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &136685691
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 136685688}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f39408290ff4cf49b08c96d8692701d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  slotsContainer: {fileID: 1100659273}
+  txtItemName: {fileID: 1957632908}
+  txtItemUsage: {fileID: 1677992557}
+  txtCount: {fileID: 431422262}
+  btnUse: {fileID: 168953193}
+  inventoryPanelRect: {fileID: 483217923}
+  canvasTransform: {fileID: 625704013}
+  totalSlots: 35
+  slots: []
+  playerTransform: {fileID: 557154381}
+  worldItemPrefab: {fileID: 4326444041072580206, guid: 37dabac58f583414e9329996e9b8fcc8,
+    type: 3}
+  playerHealth: {fileID: 1717285907}
 --- !u!1 &141877799
 GameObject:
   m_ObjectHideFlags: 0
@@ -15533,6 +15590,9 @@ MonoBehaviour:
   IsWalking: 0
   IsRunning: 0
   stamina: {fileID: 0}
+  footstepSound: {fileID: 8300000, guid: 806d462e118b7c24d959b6cef04cbf49, type: 3}
+  walkStepInterval: 0.5
+  runStepInterval: 0.3
 --- !u!143 &557154383
 CharacterController:
   m_ObjectHideFlags: 0
@@ -56411,6 +56471,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7653381842861625473, guid: b570ee6aa2fc2874ba4e84e6eaa6a043,
         type: 3}
+      propertyPath: Loop
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7653381842861625473, guid: b570ee6aa2fc2874ba4e84e6eaa6a043,
+        type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7653381842861625473, guid: b570ee6aa2fc2874ba4e84e6eaa6a043,
+        type: 3}
+      propertyPath: m_Resource
+      value: 
+      objectReference: {fileID: 8300000, guid: a2aa6ba6b9cd3ad4a82a75e1bac4ca49, type: 3}
+    - target: {fileID: 7653381842861625473, guid: b570ee6aa2fc2874ba4e84e6eaa6a043,
+        type: 3}
+      propertyPath: m_audioClip
+      value: 
+      objectReference: {fileID: 8300000, guid: a2aa6ba6b9cd3ad4a82a75e1bac4ca49, type: 3}
+    - target: {fileID: 7653381842861625473, guid: b570ee6aa2fc2874ba4e84e6eaa6a043,
+        type: 3}
+      propertyPath: m_PlayOnAwake
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7653381842861625473, guid: b570ee6aa2fc2874ba4e84e6eaa6a043,
+        type: 3}
       propertyPath: OutputAudioMixerGroup
       value: 
       objectReference: {fileID: 24300002, guid: 07b92f37c03888140b4743a02d77fac0,
@@ -56440,3 +56525,4 @@ SceneRoots:
   - {fileID: 96788833}
   - {fileID: 1739129101}
   - {fileID: 1144705839732064865}
+  - {fileID: 136685690}

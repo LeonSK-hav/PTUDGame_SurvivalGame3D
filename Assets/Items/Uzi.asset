@@ -15,10 +15,15 @@ MonoBehaviour:
   itemName: Uzi
   itemIcon: {fileID: 21300000, guid: edaeb792a5a2e4d4692455b5148e84b2, type: 3}
   itemType: 0
+  Price: 300
+  equipmentType: 1
+  requiredLevel: 1
+  scope: 0
+  ammoType: 1
   worldItemPrefab: {fileID: 8274263818585314873, guid: fb9736f98eed4a9448cd17e7212a4c1a,
     type: 3}
-  healAmount: 25
-  damageBonus: 0
+  healAmount: 0
+  damageBonus: 30
   defenseBonus: 0
   agilityBonus: 0
-  maxStack: 99
+  maxStack: 1

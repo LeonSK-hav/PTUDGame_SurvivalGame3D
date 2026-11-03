@@ -160,9 +160,9 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         {
             foreach (var slot in slots)
             {
-                if (slot != null && slot.itemData == newItem && slot.count < 99)
+                if (slot != null && slot.itemData == newItem && slot.count < slot.itemData.maxStack)
                 {
-                    int spaceLeft = 99 - slot.count;
+                    int spaceLeft = slot.itemData.maxStack - slot.count;
                     if (amount <= spaceLeft)
                     {
                         slot.count += amount;
@@ -172,7 +172,7 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
                     }
                     else
                     {
-                        slot.count = 99;
+                        slot.count = slot.itemData.maxStack;
                         amount -= spaceLeft;
                     }
                 }
@@ -188,7 +188,7 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
                 if (slot.itemData == null || slot.count <= 0)
                 {
                     slot.itemData = newItem;
-                    slot.count = Mathf.Min(amount, 99);
+                    slot.count = Mathf.Min(amount, slot.itemData.maxStack);
                     UpdateInventoryUI();
                     RefreshSelectedDetails();
                     return true;
@@ -293,6 +293,10 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         if (slot.itemData.itemType == ItemType.Consumable)
         {
             slot.count--;
+            if(slot.itemData.healAmount > 0f)
+            {
+                playerHealth?.Heal(slot.itemData.healAmount);
+            }
             if (slot.count <= 0)
             {
                 slot.itemData = null;

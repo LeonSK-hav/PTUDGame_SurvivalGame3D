@@ -15,10 +15,15 @@ MonoBehaviour:
   itemName: M4_8
   itemIcon: {fileID: 21300000, guid: 54f33ce1498943746922dffae9d18c1b, type: 3}
   itemType: 0
+  Price: 500
+  equipmentType: 1
+  requiredLevel: 2
+  scope: 8
+  ammoType: 1
   worldItemPrefab: {fileID: 2551176346034180491, guid: 510dc6e008f60d74b93570344746f01f,
     type: 3}
-  healAmount: 25
-  damageBonus: 0
+  healAmount: 0
+  damageBonus: 40
   defenseBonus: 0
   agilityBonus: 0
-  maxStack: 99
+  maxStack: 1
