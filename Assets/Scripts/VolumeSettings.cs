@@ -15,6 +15,7 @@ public class VolumeSettings : MonoBehaviour
 
     private void Start()
     {
+        /*
         // Load saved volume values or default to 1.0 if nothing is saved yet
         float savedSoundVolume = PlayerPrefs.GetFloat(MasterVolumeKey, 1f);
         float savedEffectVolume = PlayerPrefs.GetFloat(EffectVolumeKey, 1f);
@@ -25,8 +26,19 @@ public class VolumeSettings : MonoBehaviour
 
         // Apply volumes to the AudioMixer
         ApplyMasterVolume(savedSoundVolume);
-        ApplyEffectVolume(savedEffectVolume);
+        ApplyEffectVolume(savedEffectVolume);*/
     }
+    private void OnEnable()
+{
+    float savedSoundVolume = PlayerPrefs.GetFloat(MasterVolumeKey, 1f);
+    float savedEffectVolume = PlayerPrefs.GetFloat(EffectVolumeKey, 1f);
+
+    if (soundSlider != null) soundSlider.value = savedSoundVolume;
+    if (effectSlider != null) effectSlider.value = savedEffectVolume;
+
+    ApplyMasterVolume(savedSoundVolume);
+    ApplyEffectVolume(savedEffectVolume);
+}
 
     // Call this method when dragging the Master/Sound slider
     public void SetSoundVolume(float sliderValue)

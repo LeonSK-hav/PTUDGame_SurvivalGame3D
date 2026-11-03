@@ -372,6 +372,7 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
                 Image cloneImage = draggedIconClone.AddComponent<Image>();
                 cloneImage.sprite = slots[draggedSlotIndex].itemData.itemIcon;
                 cloneImage.raycastTarget = false;
+                cloneImage.color = new Color(1f, 1f, 1f, 0.8f); // Làm mờ icon clone
 
                 cloneCanvasGroup = draggedIconClone.AddComponent<CanvasGroup>();
                 cloneCanvasGroup.blocksRaycasts = false;
