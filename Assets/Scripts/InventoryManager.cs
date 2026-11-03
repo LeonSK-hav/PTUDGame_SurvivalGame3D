@@ -368,7 +368,7 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
             {
                 draggedIconClone = new GameObject("DraggedIconClone");
                 draggedIconClone.transform.SetParent(canvasTransform, false);
-
+                
                 Image cloneImage = draggedIconClone.AddComponent<Image>();
                 cloneImage.sprite = slots[draggedSlotIndex].itemData.itemIcon;
                 cloneImage.raycastTarget = false;

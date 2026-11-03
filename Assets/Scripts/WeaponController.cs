@@ -14,7 +14,6 @@ public class WeaponController : MonoBehaviour
 
     public int BulletsDamage = 25;
     public ParticleSystem muzzleFlash;
-    public AudioSource source;
     public AudioClip shootSound;
     public Transform playerCamera;
 
@@ -72,9 +71,9 @@ public class WeaponController : MonoBehaviour
 
         animator.SetTrigger("Shoot");
 
-        if (source && shootSound)
+        if (AudioManager.Instance && shootSound)
         {
-            source.PlayOneShot(shootSound);
+            AudioManager.Instance.PlayEffectSound(shootSound);
         }
 
         RaycastHit hit;
