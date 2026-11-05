@@ -82,26 +82,4 @@ public class WorldItem : MonoBehaviour
         }*/
     }
 
-    // Phòng hờ trường hợp va chạm trực tiếp (nếu có collider cứng)
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (canBePickedUp && (collision.gameObject.CompareTag("Player") || collision.gameObject.GetComponent<CharacterController>() != null))
-        {
-            TryPickUp();
-        }
-    }
-
-    void TryPickUp()
-    {
-        InventoryManager inventory = FindFirstObjectByType<InventoryManager>();
-        if (inventory != null)
-        {
-            bool success = inventory.AddItem(itemData, count);
-            if (success)
-            {
-                Debug.Log($"Đã nhặt thành công: {itemData.itemName}");
-                Destroy(gameObject);
-            }
-        }
-    }
 }

@@ -35,9 +35,9 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
     private int selectedSlotIndex = -1;          // Ô đang được chọn để xem chi tiết
     private int draggedSlotIndex = -1;           // Ô đang bị kéo chuột
-    private GameObject draggedIconClone;         // Bản sao icon đi theo chuột khi kéo
+    private GameObject draggedIconClone;         // Bản sao icon đi theo chuột khi kéo thả
     private CanvasGroup cloneCanvasGroup;
-    
+
     private void OnEnable()
     {
         if (UIManager.Instance != null)
@@ -56,49 +56,25 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
     void Start()
     {
-        // Khởi tạo hoặc làm sạch danh sách slots để tránh bị nhân đôi / lệch index
         if (slots == null)
         {
             slots = new List<InventorySlot>();
         }
 
-        // Đảm bảo danh sách luôn đúng bằng totalSlots (35 ô)
-        if (slots.Count != totalSlots)
-        {
-            slots.Clear();
-            for (int i = 0; i < totalSlots; i++)
-            {
-                slots.Add(new InventorySlot());
-            }
-        }
-        else
-        {
-            // Kiểm tra các phần tử bên trong xem có bị null không để cấp phát lại an toàn
-            for (int i = 0; i < slots.Count; i++)
-            {
-                if (slots[i] == null)
-                {
-                    slots[i] = new InventorySlot();
-                }
-            }
-        }
+        InitSlotsIfNeeded();
 
-        // 2. Đăng ký sự kiện nút Sử dụng
         if (btnUse != null)
         {
             btnUse.onClick.AddListener(OnUseItemButtonClicked);
             btnUse.gameObject.SetActive(false);
         }
 
-        // 3. Tự động gán sự kiện click cho các ô slot
         if (slotsContainer != null)
         {
             for (int i = 0; i < slotsContainer.childCount; i++)
             {
                 int index = i;
-                Transform slotTransform = slotsContainer.GetChild(i);
-                Button slotButton = slotTransform.GetComponent<Button>();
-                
+                Button slotButton = slotsContainer.GetChild(i).GetComponent<Button>();
                 if (slotButton != null)
                 {
                     slotButton.onClick.RemoveAllListeners();
@@ -122,8 +98,7 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
             playerHealth = FindFirstObjectByType<PlayerHealth>();
         }
 
-        UpdateInventoryUI();
-        ClearDetailsPanel();
+        RefreshUI();
     }
     // Hàm đảm bảo danh sách slots luôn sẵn sàng dù Inventory chưa mở
     private void InitSlotsIfNeeded()
@@ -133,79 +108,108 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
             slots = new List<InventorySlot>();
         }
 
-        if (slots.Count != totalSlots)
+        int requiredSlotCount = Mathf.Max(0, totalSlots);
+        while (slots.Count < requiredSlotCount)
         {
-            slots.Clear();
-            for (int i = 0; i < totalSlots; i++)
-            {
-                slots.Add(new InventorySlot());
-            }
+            slots.Add(new InventorySlot());
         }
-        else
+
+        for (int i = 0; i < slots.Count; i++)
         {
-            for (int i = 0; i < slots.Count; i++)
-            {
-                slots[i] ??= new InventorySlot();
-            }
+            slots[i] ??= new InventorySlot();
         }
     }
     // Thêm vật phẩm vào kho
     public bool AddItem(ItemData newItem, int amount)
     {
-        if (newItem == null || amount <= 0) return false;
-        // Đảm bảo dữ liệu slots đã sẵn sàng ngay cả khi Inventory chưa từng được mở
+        if (newItem == null || amount <= 0 || newItem.maxStack <= 0) return false;
+
         InitSlotsIfNeeded();
-        // 1. Kiểm tra và cộng dồn vào các ô đã có sẵn item đó (nếu không phải Equipment và chưa đạt maxStack = 99)
+
+        long availableSpace = 0;
         if (newItem.itemType != ItemType.Equipment)
         {
             foreach (var slot in slots)
             {
-                if (slot != null && slot.itemData == newItem && slot.count < slot.itemData.maxStack)
+                if (slot != null && slot.itemData == newItem && slot.count > 0 && slot.count < newItem.maxStack)
                 {
-                    int spaceLeft = slot.itemData.maxStack - slot.count;
-                    if (amount <= spaceLeft)
-                    {
-                        slot.count += amount;
-                        UpdateInventoryUI();
-                        RefreshSelectedDetails();
-                        return true;
-                    }
-                    else
-                    {
-                        slot.count = slot.itemData.maxStack;
-                        amount -= spaceLeft;
-                    }
+                    availableSpace += newItem.maxStack - slot.count;
                 }
             }
         }
 
-        // 2. Tìm ô trống thực sự (Sửa điều kiện kiểm tra để tránh lỗi kẹt ô trống)
         foreach (var slot in slots)
         {
-            if (slot != null)
+            if (slot != null && (slot.itemData == null || slot.count <= 0))
             {
-                // Nếu slot hoàn toàn trống hoặc count bằng 0 nhưng itemData chưa được gán null
-                if (slot.itemData == null || slot.count <= 0)
-                {
-                    slot.itemData = newItem;
-                    slot.count = Mathf.Min(amount, slot.itemData.maxStack);
-                    UpdateInventoryUI();
-                    RefreshSelectedDetails();
-                    return true;
-                }
+                availableSpace += newItem.maxStack;
             }
         }
 
-        Debug.Log("Inventory đã đầy thực sự!");
-        return false;
+        if (availableSpace < amount)
+        {
+            Debug.Log("Inventory đã đầy thực sự!");
+            return false;
+        }
+
+        int remaining = amount;
+        if (newItem.itemType != ItemType.Equipment)
+        {
+            foreach (var slot in slots)
+            {
+                if (slot == null || slot.itemData != newItem || slot.count <= 0 || slot.count >= newItem.maxStack)
+                {
+                    continue;
+                }
+
+                int added = Mathf.Min(remaining, newItem.maxStack - slot.count);
+                slot.count += added;
+                remaining -= added;
+                if (remaining == 0) break;
+            }
+        }
+
+        foreach (var slot in slots)
+        {
+            if (remaining <= 0) break;
+            if (slot == null || (slot.itemData != null && slot.count > 0)) continue;
+
+            slot.itemData = newItem;
+            slot.count = Mathf.Min(remaining, slot.itemData.maxStack);
+            remaining -= slot.count;
+        }
+
+        RefreshUI();
+        return true;
     }
 
-    // Cập nhật giao diện Inventory
-    public void UpdateInventoryUI()
+    public void RefreshUI()
     {
-        for (int i = 0; i < slotsContainer.childCount; i++)
+        if (slotsContainer == null)
         {
-            if (i >= slots.Count) break;
+            Debug.LogError("Chưa gán Slots Container trong InventoryManager.", this);
+            RefreshSelectedDetails();
+            return;
+        }
+
+        if (slotsContainer.childCount != slots.Count)
+        {
+            Debug.LogError(
+                $"Số ô UI ({slotsContainer.childCount}) không khớp số ô dữ liệu ({slots.Count}) trong InventoryManager.",
+                this);
+        }
+
+        int slotCount = Mathf.Max(slotsContainer.childCount, slots.Count);
+        for (int i = 0; i < slotCount; i++)
+        {
+            InventorySlot slotData = i < slots.Count ? slots[i] : null;
+            if (slotData != null && (slotData.itemData == null || slotData.count <= 0))
+            {
+                slotData.itemData = null;
+                slotData.count = 0;
+            }
+
+            if (i >= slotsContainer.childCount) continue;
 
             Transform slotTransform = slotsContainer.GetChild(i);
             Transform imgItemTransform = slotTransform.Find("imgItem");
@@ -214,32 +218,31 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
             Image imgItem = imgItemTransform != null ? imgItemTransform.GetComponent<Image>() : null;
             TextMeshProUGUI countText = txtCountTransform != null ? txtCountTransform.GetComponent<TextMeshProUGUI>() : null;
 
-            var slotData = slots[i];
-            if (slotData.itemData != null && slotData.count > 0)
+            bool hasItem = slotData != null && slotData.itemData != null && slotData.count > 0;
+            if (imgItem != null)
             {
-                if (imgItem != null)
-                {
-                    imgItem.gameObject.SetActive(true);
-                    imgItem.sprite = slotData.itemData.itemIcon;
-                    Color col = imgItem.color;
-                    col.a = 1f;
-                    imgItem.color = col;
-                }
-                if (countText != null)
-                {
-                    countText.gameObject.SetActive(true);
-                    countText.text = slotData.count > 1 ? slotData.count.ToString() : "";
-                }
+                imgItem.sprite = hasItem ? slotData.itemData.itemIcon : null;
+                imgItem.enabled = hasItem;
+                imgItem.gameObject.SetActive(true);
+                Color iconColor = imgItem.color;
+                iconColor.a = 1f;
+                imgItem.color = iconColor;
             }
-            else
-            {
-                slotData.itemData = null;
-                slotData.count = 0;
 
-                if (imgItem != null) imgItem.gameObject.SetActive(false);
-                if (countText != null) countText.gameObject.SetActive(false);
+            if (countText != null)
+            {
+                countText.text = hasItem && slotData.count > 1 ? slotData.count.ToString() : "";
+                countText.enabled = hasItem && slotData.count > 1;
+                countText.gameObject.SetActive(true);
             }
         }
+
+        RefreshSelectedDetails();
+    }
+
+    public void UpdateInventoryUI()
+    {
+        RefreshUI();
     }
 
     // Chọn ô slot để xem thông tin
@@ -260,8 +263,6 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         }
 
         var slot = slots[selectedSlotIndex];
-
-        // Nếu item trống hoặc số lượng = 0 thì ẩn thông tin
         if (slot.itemData == null || slot.count <= 0)
         {
             ClearDetailsPanel();
@@ -270,8 +271,6 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
         if (txtItemName != null) txtItemName.text = slot.itemData.itemName;
         if (txtItemUsage != null) txtItemUsage.text = slot.itemData.itemUsageDescription;
-        
-        // Hiển thị định dạng Quantity: số lượng
         if (txtCount != null) txtCount.text = $"Quantity: {slot.count}";
 
         if (btnUse != null)
@@ -301,15 +300,10 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
             {
                 slot.itemData = null;
                 slot.count = 0;
-                ClearDetailsPanel();
-            }
-            else
-            {
-                RefreshSelectedDetails();
             }
         }
 
-        UpdateInventoryUI();
+        RefreshUI();
     }
 
     bool ApplyItemEffect(ItemData item)
@@ -345,15 +339,14 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
     // --- CƠ CHẾ KÉO THẢ (DRAG & DROP) & VỨT ĐỒ RA THẾ GIỚI ---
 
-    // Tìm xem con chuột đang ở ô slot nào dựa trên vị trí màn hình
-    private int GetSlotIndexUnderMouse(Vector2 screenPosition)
+    private int GetSlotIndexUnderMouse(Vector2 screenPosition, Camera eventCamera)
     {
         if (slotsContainer == null) return -1;
 
         for (int i = 0; i < slotsContainer.childCount; i++)
         {
             RectTransform slotRect = slotsContainer.GetChild(i) as RectTransform;
-            if (slotRect != null && RectTransformUtility.RectangleContainsScreenPoint(slotRect, screenPosition, null))
+            if (slotRect != null && RectTransformUtility.RectangleContainsScreenPoint(slotRect, screenPosition, eventCamera))
             {
                 return i;
             }
@@ -363,20 +356,19 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        draggedSlotIndex = GetSlotIndexUnderMouse(eventData.position);
+        draggedSlotIndex = GetSlotIndexUnderMouse(eventData.position, eventData.pressEventCamera);
 
         if (draggedSlotIndex >= 0 && draggedSlotIndex < slots.Count && slots[draggedSlotIndex].itemData != null && slots[draggedSlotIndex].count > 0)
         {
-            // Tạo bản sao icon đi theo chuột
             if (canvasTransform != null)
             {
                 draggedIconClone = new GameObject("DraggedIconClone");
                 draggedIconClone.transform.SetParent(canvasTransform, false);
-                
+
                 Image cloneImage = draggedIconClone.AddComponent<Image>();
                 cloneImage.sprite = slots[draggedSlotIndex].itemData.itemIcon;
                 cloneImage.raycastTarget = false;
-                cloneImage.color = new Color(1f, 1f, 1f, 0.8f); // Làm mờ icon clone
+                cloneImage.color = new Color(1f, 1f, 1f, 0.8f);
 
                 cloneCanvasGroup = draggedIconClone.AddComponent<CanvasGroup>();
                 cloneCanvasGroup.blocksRaycasts = false;
@@ -403,7 +395,6 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        // Xóa bản sao icon kéo thả
         if (draggedIconClone != null)
         {
             Destroy(draggedIconClone);
@@ -411,7 +402,6 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
         if (draggedSlotIndex < 0) return;
 
-        // 1. Kiểm tra xem có thả ra ngoài phạm vi Inventory panel không (Vứt ra thế giới)
         if (inventoryPanelRect != null && !RectTransformUtility.RectangleContainsScreenPoint(inventoryPanelRect, eventData.position, eventData.pressEventCamera))
         {
             DropItemToWorld(draggedSlotIndex);
@@ -419,17 +409,14 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
             return;
         }
 
-        // 2. Thả vào một ô slot khác bên trong Inventory (Đổi vị trí / Swap)
-        int targetSlotIndex = GetSlotIndexUnderMouse(eventData.position);
+        int targetSlotIndex = GetSlotIndexUnderMouse(eventData.position, eventData.pressEventCamera);
         if (targetSlotIndex >= 0 && targetSlotIndex < slots.Count)
         {
             if (targetSlotIndex != draggedSlotIndex)
             {
-                // Thực hiện đổi chỗ hoặc chuyển đồ
                 InventorySlot sourceSlot = slots[draggedSlotIndex];
                 InventorySlot targetSlot = slots[targetSlotIndex];
 
-                // Nếu ô đích có đồ và cùng loại có thể stack được, cộng dồn số lượng
                 if (targetSlot.itemData == sourceSlot.itemData && targetSlot.itemData.itemType != ItemType.Equipment)
                 {
                     int totalCount = targetSlot.count + sourceSlot.count;
@@ -447,7 +434,6 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
                 }
                 else
                 {
-                    // Hoán đổi vị trí (Swap) cho nhau (kể cả ô đích trống hay có đồ khác)
                     InventorySlot temp = new InventorySlot { itemData = targetSlot.itemData, count = targetSlot.count };
                     targetSlot.itemData = sourceSlot.itemData;
                     targetSlot.count = sourceSlot.count;
@@ -456,8 +442,7 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
                     sourceSlot.count = temp.count;
                 }
 
-                UpdateInventoryUI();
-                RefreshSelectedDetails();
+                RefreshUI();
             }
         }
 
@@ -476,31 +461,39 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         // Ưu tiên lấy prefab riêng của từng ItemData, nếu không có thì dùng prefab chung của InventoryManager
         GameObject prefabToSpawn = slot.itemData.worldItemPrefab != null ? slot.itemData.worldItemPrefab : worldItemPrefab;
 
-        if (prefabToSpawn != null)
-        {
-            Vector3 dropPos = playerTransform != null 
-                ? playerTransform.position + playerTransform.forward * 2f + Vector3.up * 1.5f 
-                : transform.position;
-
-            GameObject droppedObj = Instantiate(prefabToSpawn, dropPos, Quaternion.identity);
-            
-            // Truyền thông tin ItemData và count cho object vừa rơi
-            WorldItem worldItemComp = droppedObj.GetComponent<WorldItem>();
-            if (worldItemComp != null)
-            {
-                worldItemComp.Init(slot.itemData, slot.count);
-            }
-        }
-        else
+        if (prefabToSpawn == null)
         {
             Debug.LogWarning("Chưa gán World Item Prefab (cả ở ItemData lẫn InventoryManager Inspector)!");
+            return;
         }
 
-        // Xóa item khỏi slot sau khi vứt
+        if (prefabToSpawn.GetComponent<WorldItem>() == null)
+        {
+            Debug.LogError("World Item Prefab không có component WorldItem.", prefabToSpawn);
+            return;
+        }
+
+        ItemData droppedItem = slot.itemData;
+        int droppedCount = slot.count;
         slot.itemData = null;
         slot.count = 0;
 
-        UpdateInventoryUI();
-        ClearDetailsPanel();
+        Vector3 dropPos = playerTransform != null
+            ? playerTransform.position + playerTransform.forward * 2f + Vector3.up * 1.5f
+            : transform.position;
+        GameObject droppedObj = Instantiate(prefabToSpawn, dropPos, Quaternion.identity);
+        WorldItem worldItemComp = droppedObj.GetComponent<WorldItem>();
+        if (worldItemComp == null)
+        {
+            Debug.LogError("World Item Prefab đã tạo không có component WorldItem.", droppedObj);
+            Destroy(droppedObj);
+            slot.itemData = droppedItem;
+            slot.count = droppedCount;
+            RefreshUI();
+            return;
+        }
+
+        worldItemComp.Init(droppedItem, droppedCount);
+        RefreshUI();
     }
 }
