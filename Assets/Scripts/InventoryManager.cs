@@ -494,7 +494,7 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         slot.count = 0;
 
         Vector3 dropPos = playerTransform != null
-            ? playerTransform.position + playerTransform.forward * 2f + Vector3.up * 1.5f
+            ? playerTransform.position + playerTransform.forward * 2f + Vector3.up * 2.5f
             : transform.position;
         GameObject droppedObj = Instantiate(prefabToSpawn, dropPos, Quaternion.identity);
         WorldItem worldItemComp = droppedObj.GetComponent<WorldItem>();
