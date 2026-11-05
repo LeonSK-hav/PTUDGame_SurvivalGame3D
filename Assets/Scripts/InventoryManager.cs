@@ -292,10 +292,6 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         if (slot.itemData.itemType == ItemType.Consumable)
         {
             slot.count--;
-            if(slot.itemData.healAmount > 0f)
-            {
-                playerHealth?.Heal(slot.itemData.healAmount);
-            }
             if (slot.count <= 0)
             {
                 slot.itemData = null;
@@ -308,6 +304,25 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
     bool ApplyItemEffect(ItemData item)
     {
+        if (item == null)
+        {
+            Debug.LogError("Không thể sử dụng vật phẩm rỗng.", this);
+            return false;
+        }
+
+        PlayerLevelSystem levelSystem = PlayerLevelSystem.Instance;
+        if (levelSystem == null)
+        {
+            Debug.LogError("Không tìm thấy PlayerLevelSystem để kiểm tra cấp độ vật phẩm.", this);
+            return false;
+        }
+
+        if (item.requiredLevel > levelSystem.CurrentLevel)
+        {
+            Debug.LogWarning("Level của bạn chưa đủ để sử dụng vật phẩm này!", this);
+            return false;
+        }
+
         if (item.healAmount > 0f)
         {
             if (playerHealth == null)

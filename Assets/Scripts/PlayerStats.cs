@@ -59,6 +59,24 @@ public class PlayerStats : MonoBehaviour
         if (item == null) return;
         if (item.itemType != ItemType.Equipment) return; 
 
+        PlayerLevelSystem levelSystem = GetComponent<PlayerLevelSystem>();
+        if (levelSystem == null)
+        {
+            levelSystem = PlayerLevelSystem.Instance;
+        }
+
+        if (levelSystem == null)
+        {
+            Debug.LogError("Không tìm thấy PlayerLevelSystem để kiểm tra cấp độ trang bị.", this);
+            return;
+        }
+
+        if (item.requiredLevel > levelSystem.CurrentLevel)
+        {
+            Debug.LogWarning("Level của bạn chưa đủ để sử dụng vật phẩm này!", this);
+            return;
+        }
+
         baseMaxHp += item.healAmount;
         baseDamage += item.damageBonus;
         baseDefense += item.defenseBonus;

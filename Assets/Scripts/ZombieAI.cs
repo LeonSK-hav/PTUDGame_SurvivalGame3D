@@ -17,6 +17,7 @@ public class ZombieAI : MonoBehaviour
     [Header("Health")]
     public int currentHealth;
     public int maxHealth = 100;
+    public int expReward = 20;
 
     [Header("UI Health Bar Prefab")]
     public GameObject healthUIPrefab;       // Kéo Prefab "ZombieHeathUI" vào đây
@@ -166,8 +167,20 @@ public class ZombieAI : MonoBehaviour
 
     void Die()
     {
+        if (dead) return;
+
         dead = true;
         currentHealth = 0;
+
+        if (PlayerLevelSystem.Instance != null)
+        {
+            PlayerLevelSystem.Instance.AddExp(expReward);
+        }
+        else
+        {
+            Debug.LogError("Không tìm thấy PlayerLevelSystem để cộng EXP khi Zombie chết.", this);
+        }
+
         agent.ResetPath();
         agent.speed = 0;
         anim.SetBool("Death", true);
