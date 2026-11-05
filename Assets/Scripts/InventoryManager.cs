@@ -467,48 +467,73 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
     // Sinh vật phẩm ra thế giới khi kéo vứt ra ngoài khung inventory
     void DropItemToWorld(int slotIndex)
+{
+    var slot = slots[slotIndex];
+    if (slot.itemData == null || slot.count <= 0) return;
+
+    Debug.Log($"Đã vứt vật phẩm {slot.itemData.itemName} (Số lượng: {slot.count}) ra ngoài thế giới!");
+
+    // Ưu tiên lấy prefab riêng của từng ItemData, nếu không có thì dùng prefab chung của InventoryManager
+    GameObject prefabToSpawn = slot.itemData.worldItemPrefab != null ? slot.itemData.worldItemPrefab : worldItemPrefab;
+
+    if (prefabToSpawn == null)
     {
-        var slot = slots[slotIndex];
-        if (slot.itemData == null || slot.count <= 0) return;
+        Debug.LogWarning("Chưa gán World Item Prefab (cả ở ItemData lẫn InventoryManager Inspector)!");
+        return;
+    }
 
-        Debug.Log($"Đã vứt vật phẩm {slot.itemData.itemName} (Số lượng: {slot.count}) ra ngoài thế giới!");
+    if (prefabToSpawn.GetComponent<WorldItem>() == null)
+    {
+        Debug.LogError("World Item Prefab không có component WorldItem.", prefabToSpawn);
+        return;
+    }
 
-        // Ưu tiên lấy prefab riêng của từng ItemData, nếu không có thì dùng prefab chung của InventoryManager
-        GameObject prefabToSpawn = slot.itemData.worldItemPrefab != null ? slot.itemData.worldItemPrefab : worldItemPrefab;
+    ItemData droppedItem = slot.itemData;
+    int droppedCount = slot.count;
+    slot.itemData = null;
+    slot.count = 0;
 
-        if (prefabToSpawn == null)
-        {
-            Debug.LogWarning("Chưa gán World Item Prefab (cả ở ItemData lẫn InventoryManager Inspector)!");
-            return;
-        }
+    // Kiểm tra xem vật phẩm có phải là Đạn hay không (dựa vào itemType hoặc tên loại)
+    bool isAmmo = droppedItem.itemType == ItemType.Consumable && droppedItem.ammoType != AmmoType.None; 
 
-        if (prefabToSpawn.GetComponent<WorldItem>() == null)
-        {
-            Debug.LogError("World Item Prefab không có component WorldItem.", prefabToSpawn);
-            return;
-        }
-
-        ItemData droppedItem = slot.itemData;
-        int droppedCount = slot.count;
-        slot.itemData = null;
-        slot.count = 0;
-
+    if (isAmmo)
+    {
+        // 1. Nếu là đạn: Chỉ tạo 1 GameObject duy nhất chứa toàn bộ số lượng đạn
         Vector3 dropPos = playerTransform != null
             ? playerTransform.position + playerTransform.forward * 2f + Vector3.up * 2.5f
             : transform.position;
+
         GameObject droppedObj = Instantiate(prefabToSpawn, dropPos, Quaternion.identity);
         WorldItem worldItemComp = droppedObj.GetComponent<WorldItem>();
-        if (worldItemComp == null)
+        
+        if (worldItemComp != null)
         {
-            Debug.LogError("World Item Prefab đã tạo không có component WorldItem.", droppedObj);
-            Destroy(droppedObj);
-            slot.itemData = droppedItem;
-            slot.count = droppedCount;
-            RefreshUI();
-            return;
+            worldItemComp.Init(droppedItem, droppedCount);
         }
-
-        worldItemComp.Init(droppedItem, droppedCount);
-        RefreshUI();
     }
+    else
+    {
+        // 2. Nếu là vật phẩm khác (cam, táo...): Tạo số lượng GameObject đúng bằng droppedCount
+        for (int i = 0; i < droppedCount; i++)
+        {
+            // Tạo độ lệch vị trí ngẫu nhiên nhỏ xung quanh phía trước player để các quả không bị đè cứng lên nhau
+            Vector3 randomOffset = new Vector3(Random.Range(-0.5f, 0.5f), 0f, Random.Range(-0.5f, 0.5f));
+            Vector3 dropPos = playerTransform != null
+                ? playerTransform.position + playerTransform.forward * 2f + randomOffset + Vector3.up * (2.5f + (i * 0.2f))
+                : transform.position + randomOffset;
+
+            GameObject droppedObj = Instantiate(prefabToSpawn, dropPos, Quaternion.identity);
+            WorldItem worldItemComp = droppedObj.GetComponent<WorldItem>();
+            
+            if (worldItemComp != null)
+            {
+                // Mỗi object rơi ra sẽ mang số lượng là 1
+                worldItemComp.Init(droppedItem, 1);
+            }
+        }
+    }
+    RefreshUI();
+    UpdateInventoryUI();
+    ClearDetailsPanel();
+}
 }
