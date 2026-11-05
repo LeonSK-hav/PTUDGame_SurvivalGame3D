@@ -179,8 +179,8 @@ public class ShopManager : MonoBehaviour
                 }
                 else
                 {
-                    int basePrice = defaultItemPrice > 0 ? defaultItemPrice : 20;
-                    int sellPrice = Mathf.Max(1, basePrice * 2 / 3);
+                    int basePrice = slot.itemData.Price > 0 ? slot.itemData.Price : 20;
+                    int sellPrice =  basePrice * 2 / 3;
 
                     shopItems.Add(new ShopItem
                     {
@@ -290,8 +290,15 @@ public class ShopManager : MonoBehaviour
         if (txtItemName != null) txtItemName.text = shopItem.itemData.itemName;
         if (txtItemUsage != null) txtItemUsage.text = shopItem.itemData.itemUsageDescription;
         if (txtCount != null) txtCount.text = $"Quantity: {currentQuantity}";
+        int unitPrice=0;
+        if(isBuyMode)
+        {
+             unitPrice = shopItem.price;
 
-        int unitPrice = shopItem.price;
+        }
+        {
+            unitPrice = shopItem.price * 2 / 3;
+        }
         int totalPrice = unitPrice * currentQuantity;
 
         if (txtPrice != null)
@@ -405,7 +412,7 @@ public class ShopManager : MonoBehaviour
     {
         if (selectedIndex < 0 || selectedIndex >= shopItems.Count) return;
         var shopItem = shopItems[selectedIndex];
-        int totalEarnings = shopItem.price * currentQuantity;
+        int totalEarnings = shopItem.price * 2 / 3 * currentQuantity;
 
         bool removedSuccess = RemoveItemFromInventory(shopItem.itemData, currentQuantity);
         if (!removedSuccess)
