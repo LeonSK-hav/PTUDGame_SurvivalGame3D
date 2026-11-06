@@ -16493,7 +16493,7 @@ Transform:
   m_GameObject: {fileID: 557154376}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 11.28, y: 1.08, z: 7.66}
+  m_LocalPosition: {x: 43.15, y: 1.08, z: 7.66}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -26506,13 +26506,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cf8341b4fe63fbe4a8f174589ce482f3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  weaponData: {fileID: 0}
   BulletRange: 100
   FireRate: 0.5
-  currentBullets: 0
-  BulletsInMag: 8
   BulletsDamage: 25
+  BulletsInMag: 8
+  currentBullets: 0
   muzzleFlash: {fileID: 132638266}
   shootSound: {fileID: 8300000, guid: f9ab20b4342184a46921955b3300481d, type: 3}
+  reloadSound: {fileID: 0}
   playerCamera: {fileID: 330585546}
   shootingMask:
     serializedVersion: 2
@@ -39175,6 +39177,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1401641687}
+  - component: {fileID: 1401641688}
   m_Layer: 3
   m_Name: Weapon Holder
   m_TagString: Untagged
@@ -39198,6 +39201,23 @@ Transform:
   - {fileID: 914249300}
   m_Father: {fileID: 330585546}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1401641688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1401641686}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3a7b9148d2c4164aa1209e817d58302, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  weapons:
+  - {fileID: 914249303}
+  selectedWeapon: 0
+  switchSound: {fileID: 0}
+  scrollThreshold: 0.1
 --- !u!1 &1402634507
 GameObject:
   m_ObjectHideFlags: 0

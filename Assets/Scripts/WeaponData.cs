@@ -18,6 +18,7 @@ public class WeaponData : ScriptableObject
 
     [Header("Magazine & Ammo")]
     [Min(1)] public int magazineSize = 8;
+    [Min(0.1f)] public float reloadDuration = 1.2f;
     [Tooltip("Vật phẩm đạn tương ứng trong Inventory")]
     public ItemData ammoTypeItem;
 

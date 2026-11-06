@@ -14,6 +14,7 @@ public class WeaponController : MonoBehaviour
     public int BulletsDamage = 25;
     public int BulletsInMag = 8;
     public int currentBullets = 0;
+    public float reloadDuration = 1.2f;
 
     [Header("Visual & Audio")]
     public ParticleSystem muzzleFlash;
@@ -27,6 +28,8 @@ public class WeaponController : MonoBehaviour
     private Animator animator;
     private PlayerController player;
     private float nextFireTime = 0f;
+    private bool isReloading = false;
+    private Coroutine reloadCoroutine;
 
     public int CurrentBullets
     {
@@ -36,6 +39,11 @@ public class WeaponController : MonoBehaviour
     public int MaxBulletsInMag
     {
         get { return BulletsInMag; }
+    }
+
+    public bool IsReloading
+    {
+        get { return isReloading; }
     }
 
     private void Awake()
@@ -62,10 +70,14 @@ public class WeaponController : MonoBehaviour
         }
     }
 
-    private void OnEnable()
+    private void OnDisable()
     {
-        ResolvePlayer();
-        ResolveCamera();
+        if (reloadCoroutine != null)
+        {
+            StopCoroutine(reloadCoroutine);
+            reloadCoroutine = null;
+        }
+        isReloading = false;
     }
 
     /// <summary>
@@ -81,6 +93,11 @@ public class WeaponController : MonoBehaviour
         BulletsDamage = weaponData.damage;
         BulletsInMag = weaponData.magazineSize;
         currentBullets = BulletsInMag;
+
+        if (weaponData.reloadDuration > 0f)
+        {
+            reloadDuration = weaponData.reloadDuration;
+        }
 
         if (weaponData.shootSound != null)
         {
@@ -137,14 +154,14 @@ public class WeaponController : MonoBehaviour
             (UIManager.Instance != null && UIManager.Instance.IsGameplayInputBlocked) ||
             Cursor.visible || CursorLockMode.Locked != Cursor.lockState;
 
-        // Xử lý bắn
+        // Xử lý bắn (chặn khi đang chạy hoặc đang nạp đạn)
         if (!gameplayInputBlocked && InputManager.Instance != null && InputManager.Instance.playerInput != null)
         {
             var fireAction = InputManager.Instance.playerInput.Player.Fire;
             if (fireAction.WasPressedThisFrame() || fireAction.IsPressed())
             {
                 bool isRunning = player != null && player.IsRunning;
-                if (!isRunning)
+                if (!isRunning && !isReloading)
                 {
                     if (Time.time >= nextFireTime && currentBullets > 0)
                     {
@@ -171,14 +188,35 @@ public class WeaponController : MonoBehaviour
 
     public void Reload()
     {
-        if (currentBullets >= BulletsInMag) return;
+        if (isReloading || currentBullets >= BulletsInMag) return;
 
-        currentBullets = BulletsInMag;
+        if (reloadCoroutine != null)
+        {
+            StopCoroutine(reloadCoroutine);
+        }
+        reloadCoroutine = StartCoroutine(ReloadRoutine());
+    }
+
+    private IEnumerator ReloadRoutine()
+    {
+        isReloading = true;
+
+        if (animator != null)
+        {
+            animator.SetTrigger("Reload");
+        }
 
         if (AudioManager.Instance != null && reloadSound != null)
         {
             AudioManager.Instance.PlayEffectSound(reloadSound);
         }
+
+        float duration = Mathf.Max(0.1f, reloadDuration);
+        yield return new WaitForSeconds(duration);
+
+        currentBullets = BulletsInMag;
+        isReloading = false;
+        reloadCoroutine = null;
     }
 
     public void Shoot()
