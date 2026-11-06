@@ -47413,6 +47413,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 415400ba493f4034880efe8bcde8b723, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  zombieType: 1
   target: {fileID: 557154381}
   playerHealth: {fileID: 1717285907}
   Runner: 1
@@ -57532,6 +57533,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 415400ba493f4034880efe8bcde8b723, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  zombieType: 2
   target: {fileID: 557154381}
   playerHealth: {fileID: 1717285907}
   Runner: 1

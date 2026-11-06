@@ -5,8 +5,26 @@ using UnityEngine.AI;
 using UnityEngine.UI;
 using TMPro;
 
+public enum ZombieType
+{
+    Normal,   // Cấp 1: Zombie Thường (Xuất hiện nhiều nhất, +20 EXP)
+    Medium,   // Cấp 2: Zombie Trung (Đột biến, chạy cực nhanh, cắn đau, hú gọi bầy, +50 EXP)
+    Boss      // Cấp 3: Zombie Boss (Level Max, khổng lồ x1.7, siêu trâu 600 HP, lực cắn 35, cuồng nộ, triệu tập đàn, +200 EXP)
+}
+
 public class ZombieAI : MonoBehaviour
 {
+    [Header("Zombie Tier / Level System")]
+    public ZombieType zombieType = ZombieType.Normal;
+    public bool autoApplyTierStats = true; // Tự động áp dụng bộ chỉ số theo Cấp độ khi Start
+    public string customZombieName = "";   // Tên hiển thị trên thanh máu (để trống sẽ tự sinh theo cấp độ)
+
+    [Header("Tier Special Features")]
+    public float callHordeRadius = 0f;     // Bán kính gọi bầy đàn hỗ trợ khi phát hiện player hoặc trúng đạn
+    public bool isEnraged = false;         // Trạng thái Cuồng Nộ (dành cho Boss khi máu < 50%)
+    private bool hasCalledHorde = false;
+
+    [Header("Target & Movement")]
     public Transform target;
     public PlayerHealth playerHealth;
     public bool Runner = false;
@@ -75,13 +93,22 @@ public class ZombieAI : MonoBehaviour
     private List<MaterialColorData> materialColorDataList = new List<MaterialColorData>();
     private Coroutine flashCoroutine;
 
-    private void Start()
+    private void Awake()
     {
-        currentHealth = maxHealth;
         anim = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
         col = GetComponent<CapsuleCollider>();
 
+        // Áp dụng bộ chỉ số theo Cấp độ nếu bật tính năng tự động
+        if (autoApplyTierStats)
+        {
+            ApplyTierPreset(zombieType);
+        }
+    }
+
+    private void Start()
+    {
+        currentHealth = maxHealth;
         initialPosition = transform.position;
         wanderTimer = Random.Range(0.5f, minWanderWaitTime);
 
@@ -155,7 +182,8 @@ public class ZombieAI : MonoBehaviour
                 rt.anchorMin = new Vector2(0.5f, 0.5f);
                 rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.localScale = Vector3.one;
+                // Đối với Boss, thanh máu sẽ to hơn 35% để thể hiện sự áp đảo
+                rt.localScale = (zombieType == ZombieType.Boss) ? new Vector3(1.35f, 1.35f, 1f) : Vector3.one;
             }
 
             healthSlider = instantiatedHealthUI.GetComponentInChildren<Slider>();
@@ -171,7 +199,7 @@ public class ZombieAI : MonoBehaviour
         float initialDistance = Vector3.Distance(transform.position, target.position);
         if (initialDistance <= detectionRange)
         {
-            isAggroed = true;
+            TriggerAggro();
             agent.speed = Runner ? runSpeed : walkSpeed;
             agent.SetDestination(target.position);
         }
@@ -183,6 +211,139 @@ public class ZombieAI : MonoBehaviour
         else
         {
             agent.isStopped = true;
+        }
+    }
+
+    /// <summary>
+    /// Áp dụng bộ chỉ số cân bằng cho 3 cấp độ Zombie
+    /// </summary>
+    public void ApplyTierPreset(ZombieType type)
+    {
+        zombieType = type;
+        switch (type)
+        {
+            case ZombieType.Normal:
+                if (string.IsNullOrEmpty(customZombieName)) customZombieName = "Zombie Thường";
+                maxHealth = 100;
+                currentHealth = maxHealth;
+                damageAmount = 10;
+                walkSpeed = 2f;
+                runSpeed = 3.5f;
+                Runner = false;
+                wanderSpeed = 1.6f;
+                wanderRadius = 8f;
+                attackDistance = 2f;
+                attackCooldown = 1.2f;
+                hitDuration = 0.4f;
+                detectionRange = 15f;
+                loseTargetRange = 25f;
+                expReward = 20;
+                callHordeRadius = 0f;
+                transform.localScale = Vector3.one;
+                break;
+
+            case ZombieType.Medium:
+                if (string.IsNullOrEmpty(customZombieName)) customZombieName = "[Trung Cấp] Zombie Nhanh";
+                maxHealth = 180;
+                currentHealth = maxHealth;
+                damageAmount = 18;
+                walkSpeed = 2.8f;
+                runSpeed = 5.2f; // Chạy nhanh vượt trội
+                Runner = true;   // Luôn kích hoạt hoạt ảnh chạy
+                wanderSpeed = 2.2f;
+                wanderRadius = 12f;
+                attackDistance = 2f;
+                attackCooldown = 0.85f; // Cắn dồn dập, nhanh hơn
+                hitDuration = 0.2f;     // Kháng khựng tốt hơn khi trúng đạn
+                detectionRange = 22f;   // Tầm phát hiện rộng hơn
+                loseTargetRange = 32f;
+                expReward = 50;         // Thưởng 50 EXP
+                callHordeRadius = 12f;  // Hú gọi đồng bọn xung quanh
+                transform.localScale = new Vector3(1.15f, 1.15f, 1.15f);
+                break;
+
+            case ZombieType.Boss:
+                if (string.IsNullOrEmpty(customZombieName)) customZombieName = "★ BOSS ZOMBIE CHÚA ★";
+                maxHealth = 600;        // Máu trâu gấp 6 lần thường
+                currentHealth = maxHealth;
+                damageAmount = 35;       // Cực kỳ nguy hiểm
+                walkSpeed = 3.2f;
+                runSpeed = 5.8f;        // Áp sát vũ bão
+                Runner = true;
+                wanderSpeed = 2.4f;
+                wanderRadius = 15f;
+                attackDistance = 2.8f;  // Tầm với xa hơn do thể hình to lớn
+                attackCooldown = 0.9f;
+                hitDuration = 0.08f;    // Miễn nhiễm gần như hoàn toàn với việc bị bắn làm khựng lại
+                detectionRange = 30f;   // Tầm phát hiện tối đa
+                loseTargetRange = 45f;
+                expReward = 200;        // Thưởng 200 EXP cực khủng
+                callHordeRadius = 25f;  // Triệu tập toàn bộ đàn Zombie xung quanh
+                transform.localScale = new Vector3(1.7f, 1.7f, 1.7f); // Thể hình khổng lồ áp đảo
+                break;
+        }
+
+        if (agent != null)
+        {
+            agent.speed = Runner ? runSpeed : walkSpeed;
+        }
+    }
+
+    [ContextMenu("Apply Tier Preset")]
+    private void ContextApplyPreset() => ApplyTierPreset(zombieType);
+
+    [ContextMenu("Set To Normal Tier")]
+    private void ContextSetNormal() => ApplyTierPreset(ZombieType.Normal);
+
+    [ContextMenu("Set To Medium Tier")]
+    private void ContextSetMedium() => ApplyTierPreset(ZombieType.Medium);
+
+    [ContextMenu("Set To Boss Tier")]
+    private void ContextSetBoss() => ApplyTierPreset(ZombieType.Boss);
+
+    // Kích hoạt trạng thái truy đuổi và gọi đàn nếu có tính năng
+    private void TriggerAggro()
+    {
+        isAggroed = true;
+        if (!hasCalledHorde && callHordeRadius > 0f)
+        {
+            hasCalledHorde = true;
+            AlertNearbyZombies(callHordeRadius);
+        }
+    }
+
+    /// <summary>
+    /// Hú gọi và kích động các Zombie lân cận cùng lao vào tấn công Player
+    /// </summary>
+    public void AlertNearbyZombies(float radius)
+    {
+        if (radius <= 0f) return;
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, radius);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            ZombieAI ally = hits[i].GetComponent<ZombieAI>() ?? hits[i].GetComponentInParent<ZombieAI>();
+            if (ally != null && ally != this && !ally.dead)
+            {
+                ally.AlertByAlly(target);
+            }
+        }
+    }
+
+    public void AlertByAlly(Transform playerTarget)
+    {
+        if (dead) return;
+        if (!isAggroed)
+        {
+            isAggroed = true;
+            if (target == null && playerTarget != null) target = playerTarget;
+            if (agent != null && agent.enabled && target != null)
+            {
+                agent.isStopped = false;
+                agent.speed = Runner ? runSpeed : walkSpeed;
+                agent.SetDestination(target.position);
+                anim.SetBool("Run", Runner);
+            }
         }
     }
 
@@ -272,7 +433,6 @@ public class ZombieAI : MonoBehaviour
                     out localPoint))
                 {
                     uiRect.anchoredPosition = localPoint;
-                    uiRect.localScale = Vector3.one;
 
                     if (!instantiatedHealthUI.activeSelf)
                     {
@@ -295,12 +455,13 @@ public class ZombieAI : MonoBehaviour
         // Vùng phát hiện player giới hạn trong khoảng nhỏ (detectionRange) hoặc đã bị kích động (isAggroed)
         if (distance <= detectionRange || isAggroed)
         {
-            isAggroed = true;
+            TriggerAggro();
 
             // Nếu player chạy thoát vượt quá loseTargetRange, zombie mất dấu và quay lại đi dạo ngẫu nhiên
             if (distance > loseTargetRange)
             {
                 isAggroed = false;
+                hasCalledHorde = false;
                 agent.ResetPath();
                 isWaitingAtPoint = true;
                 wanderTimer = Random.Range(minWanderWaitTime, maxWanderWaitTime);
@@ -471,13 +632,26 @@ public class ZombieAI : MonoBehaviour
         if (dead) return;
 
         // Khi bị bắn trúng, zombie sẽ lập tức phát hiện và truy đuổi player
-        isAggroed = true;
+        TriggerAggro();
 
         currentHealth -= Damage;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
 
         // HIỆU ỨNG MÀU ĐỎ BIỂU THỊ ZOMBIE BỊ TRỪ MÁU (Theo yêu cầu khôi phục từ commit cũ)
         TriggerHitFlash();
+
+        // KÍCH HOẠT TRẠNG THÁI CUỒNG NỘ KHI BOSS DƯỚI 50% MÁU
+        if (zombieType == ZombieType.Boss && !isEnraged && currentHealth > 0 && currentHealth <= maxHealth * 0.5f)
+        {
+            isEnraged = true;
+            runSpeed += 1.5f;       // Tăng tốc độ chạy lên mức khủng khiếp
+            damageAmount += 10;     // Tăng thêm sát thương cắn
+            attackCooldown = Mathf.Max(0.6f, attackCooldown - 0.25f); // Cắn nhanh dồn dập
+            if (agent != null) agent.speed = runSpeed;
+            customZombieName = "★ [CUỒNG NỘ] BOSS ZOMBIE CHÚA ★";
+            AlertNearbyZombies(callHordeRadius * 1.5f); // Gầm thét triệu tập toàn bộ zombie bán kính rộng
+            Debug.Log($"<color=red><b>{customZombieName} đã rơi vào trạng thái CUỒNG NỘ!</b></color>");
+        }
 
         // MỖI KHI BỊ GIẢM MÁU THÌ KÍCH HOẠT HIỂN THỊ THANH MÁU TRÊN ĐẦU
         isHealthBarVisible = true;
@@ -558,7 +732,11 @@ public class ZombieAI : MonoBehaviour
 
         if (healthText != null)
         {
-            healthText.text = $"{currentHealth}/{maxHealth}";
+            string displayName = !string.IsNullOrEmpty(customZombieName) ? customZombieName :
+                (zombieType == ZombieType.Boss ? "★ BOSS ZOMBIE ★" :
+                 zombieType == ZombieType.Medium ? "[Trung Cấp] Zombie Nhanh" : "Zombie Thường");
+
+            healthText.text = $"{displayName}\n{currentHealth}/{maxHealth}";
         }
     }
 
