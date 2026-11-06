@@ -20,11 +20,12 @@ public class ZombieAI : MonoBehaviour
     public int expReward = 20;
 
     [Header("UI Health Bar Prefab")]
-    public GameObject healthUIPrefab;       // Kéo Prefab "ZombieHeathUI" vào đây
+    public GameObject healthUIPrefab;       // Kéo Prefab "Zombie_HP_Bar" vào đây
     private GameObject instantiatedHealthUI;// Bản sao thanh máu riêng của con zombie này
     private Slider healthSlider;            
     private TextMeshProUGUI healthText;     
     public Vector3 headOffset = new Vector3(0, 2.2f, 0); // Khoảng cách từ gốc zombie lên đầu
+    private bool isHealthBarVisible = false;
 
     [Header("Combat")]
     public int damageAmount = 10;
@@ -37,6 +38,18 @@ public class ZombieAI : MonoBehaviour
     public float loseTargetRange = 25f;   // Khoảng cách mất dấu player
     private bool isAggroed = false;
 
+    [Header("Wander Settings (Di chuyển ngẫu nhiên)")]
+    public bool enableWander = true;      // Cho phép zombie di chuyển ngẫu nhiên khi chưa phát hiện player
+    public float wanderRadius = 10f;      // Bán kính di chuyển ngẫu nhiên xung quanh khu vực
+    public float minWanderWaitTime = 2f;  // Thời gian đứng nghỉ tối thiểu giữa các lần đi
+    public float maxWanderWaitTime = 5f;  // Thời gian đứng nghỉ tối đa
+    public float wanderSpeed = 1.8f;      // Tốc độ di chuyển khi đi dạo/tuần tra
+    
+    private Vector3 initialPosition;      // Vị trí xuất phát của zombie
+    private float wanderTimer = 0f;
+    private float wanderMoveTimeout = 0f;
+    private bool isWaitingAtPoint = false;
+
     [Header("Hit Flash Effect (Red on Damage)")]
     public Color hitColor = Color.red;    // Hiệu ứng màu đỏ biểu thị zombie bị trừ máu (theo commit cũ)
     public float flashDuration = 0.2f;
@@ -44,6 +57,7 @@ public class ZombieAI : MonoBehaviour
     float nextAttackTime;
 
     private NavMeshAgent agent;
+    private CapsuleCollider col;
     Animator anim;
 
     bool dead;
@@ -66,6 +80,11 @@ public class ZombieAI : MonoBehaviour
         currentHealth = maxHealth;
         anim = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
+        col = GetComponent<CapsuleCollider>();
+
+        initialPosition = transform.position;
+        wanderTimer = Random.Range(0.5f, minWanderWaitTime);
+
         if (target == null)
         {
             Debug.LogError($"{name} requires a target Transform.", this);
@@ -85,47 +104,85 @@ public class ZombieAI : MonoBehaviour
             return;
         }
 
-        agent.speed = Runner ? runSpeed : walkSpeed;
-
-        // Giới hạn tầm phát hiện ngay từ ban đầu: chỉ di chuyển nếu player nằm trong detectionRange
-        float initialDistance = Vector3.Distance(transform.position, target.position);
-        if (initialDistance <= detectionRange)
-        {
-            isAggroed = true;
-            agent.SetDestination(target.position);
-        }
-        else
-        {
-            agent.isStopped = true;
-        }
-
         mainCamera = Camera.main;
 
         // Lưu trữ Renderers và Material để đổi màu đỏ khi nhận sát thương
         InitializeHitFlashMaterials();
 
-        // Tự động tìm Canvas chính trong Scene
+        // Tự động tìm Canvas chính trong Scene (ưu tiên root Canvas ScreenSpaceOverlay đang active)
         Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
         foreach (var canvas in canvases)
         {
-            if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            if (canvas.renderMode == RenderMode.ScreenSpaceOverlay && canvas.isRootCanvas && canvas.isActiveAndEnabled)
             {
                 mainCanvas = canvas;
                 break;
             }
         }
+        if (mainCanvas == null && canvases.Length > 0)
+        {
+            foreach (var c in canvases)
+            {
+                if (c.isRootCanvas && c.isActiveAndEnabled) { mainCanvas = c; break; }
+            }
+        }
         if (mainCanvas == null && canvases.Length > 0) mainCanvas = canvases[0];
 
-        // Tự động sinh ra bản sao thanh máu
+        // Tự động sinh ra bản sao thanh máu riêng cho zombie này
         if (healthUIPrefab != null && mainCanvas != null)
         {
             instantiatedHealthUI = Instantiate(healthUIPrefab, mainCanvas.transform, false);
-            
+
+            // Hủy bỏ CanvasScaler và GraphicRaycaster để không xung đột scale và không cản tia bắn đạn
+            var childRaycaster = instantiatedHealthUI.GetComponent<GraphicRaycaster>();
+            if (childRaycaster != null) Destroy(childRaycaster);
+
+            var childScaler = instantiatedHealthUI.GetComponent<CanvasScaler>();
+            if (childScaler != null) Destroy(childScaler);
+
+            // Giữ Canvas làm Sub-Canvas và ưu tiên thứ tự vẽ lên trên
+            var childCanvas = instantiatedHealthUI.GetComponent<Canvas>();
+            if (childCanvas != null)
+            {
+                childCanvas.overrideSorting = true;
+                childCanvas.sortingOrder = 50;
+            }
+
+            // Chuẩn hóa Anchor và Pivot về chính giữa (0.5, 0.5) để ghim chuẩn tâm thanh máu
+            RectTransform rt = instantiatedHealthUI.GetComponent<RectTransform>();
+            if (rt != null)
+            {
+                rt.anchorMin = new Vector2(0.5f, 0.5f);
+                rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.localScale = Vector3.one;
+            }
+
             healthSlider = instantiatedHealthUI.GetComponentInChildren<Slider>();
             healthText = instantiatedHealthUI.GetComponentInChildren<TextMeshProUGUI>();
 
+            // Mặc định ban đầu ẩn thanh máu
             instantiatedHealthUI.SetActive(false);
+            isHealthBarVisible = false;
             UpdateHealthUI();
+        }
+
+        // Kiểm tra tầm phát hiện ban đầu
+        float initialDistance = Vector3.Distance(transform.position, target.position);
+        if (initialDistance <= detectionRange)
+        {
+            isAggroed = true;
+            agent.speed = Runner ? runSpeed : walkSpeed;
+            agent.SetDestination(target.position);
+        }
+        else if (enableWander)
+        {
+            // Bắt đầu di chuyển ngẫu nhiên
+            StartNewWander();
+        }
+        else
+        {
+            agent.isStopped = true;
         }
     }
 
@@ -162,38 +219,71 @@ public class ZombieAI : MonoBehaviour
     // Dùng LateUpdate để ghim chuẩn xác thanh máu lên đầu Zombie
     void LateUpdate()
     {
-        if (instantiatedHealthUI != null && instantiatedHealthUI.activeSelf && mainCamera != null && mainCanvas != null)
+        if (instantiatedHealthUI == null) return;
+
+        // Chỉ hiển thị và cập nhật vị trí thanh máu nếu zombie đã từng bị bắn trúng (isHealthBarVisible == true)
+        if (!isHealthBarVisible || dead)
         {
-            // Lấy vị trí đỉnh đầu của Zombie trong không gian 3D
-            Vector3 worldPosition = transform.position + headOffset;
-            
-            // Chuyển đổi tọa độ 3D thành tọa độ màn hình (Screen Point)
-            Vector3 screenPosition = mainCamera.WorldToScreenPoint(worldPosition);
+            if (instantiatedHealthUI.activeSelf) instantiatedHealthUI.SetActive(false);
+            return;
+        }
 
-            // Kiểm tra xem Zombie có đang ở trước mặt camera không
-            if (screenPosition.z > 0)
+        if (mainCamera == null) mainCamera = Camera.main;
+        if (mainCamera == null || mainCanvas == null) return;
+
+        // 1. Xác định vị trí đỉnh đầu Zombie trong không gian 3D (dựa theo CapsuleCollider để không bị lệch khi xoay)
+        Vector3 headWorldPos;
+        if (col != null)
+        {
+            headWorldPos = new Vector3(col.bounds.center.x, col.bounds.max.y + 0.25f, col.bounds.center.z);
+        }
+        else
+        {
+            float height = (headOffset.y > 0.5f) ? headOffset.y : 2.2f;
+            headWorldPos = transform.position + Vector3.up * height;
+        }
+
+        // 2. Kiểm tra xem Zombie có đang ở phía trước tầm nhìn của Camera không
+        Vector3 toZombie = headWorldPos - mainCamera.transform.position;
+        bool isBehindCamera = Vector3.Dot(mainCamera.transform.forward, toZombie) <= 0.1f;
+
+        if (isBehindCamera)
+        {
+            if (instantiatedHealthUI.activeSelf) instantiatedHealthUI.SetActive(false);
+            return;
+        }
+
+        // 3. Chuyển đổi vị trí 3D sang tọa độ màn hình (Screen Point)
+        Vector3 screenPosition = mainCamera.WorldToScreenPoint(headWorldPos);
+
+        if (screenPosition.z > 0)
+        {
+            RectTransform canvasRect = mainCanvas.GetComponent<RectTransform>();
+            RectTransform uiRect = instantiatedHealthUI.GetComponent<RectTransform>();
+
+            if (canvasRect != null && uiRect != null)
             {
-                RectTransform rectTransform = instantiatedHealthUI.GetComponent<RectTransform>();
-                RectTransform canvasRect = mainCanvas.GetComponent<RectTransform>();
-
-                if (rectTransform != null && canvasRect != null)
+                Vector2 localPoint;
+                Camera camForRect = (mainCanvas.renderMode == RenderMode.ScreenSpaceOverlay) ? null : mainCamera;
+                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    canvasRect,
+                    screenPosition,
+                    camForRect,
+                    out localPoint))
                 {
-                    Vector2 localPoint;
-                    RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                        canvasRect,
-                        screenPosition,
-                        null, // Truyền null vì Canvas là Screen Space - Overlay
-                        out localPoint
-                    );
-                    rectTransform.anchoredPosition = localPoint;
-                }
+                    uiRect.anchoredPosition = localPoint;
+                    uiRect.localScale = Vector3.one;
 
-                instantiatedHealthUI.transform.localScale = Vector3.one;
+                    if (!instantiatedHealthUI.activeSelf)
+                    {
+                        instantiatedHealthUI.SetActive(true);
+                    }
+                }
             }
-            else
-            {
-                instantiatedHealthUI.SetActive(false);
-            }
+        }
+        else
+        {
+            if (instantiatedHealthUI.activeSelf) instantiatedHealthUI.SetActive(false);
         }
     }
 
@@ -202,23 +292,25 @@ public class ZombieAI : MonoBehaviour
         if (dead) return;
         float distance = Vector3.Distance(transform.position, target.position);
 
-        // Vùng phát hiện player giới hạn trong khoảng nhỏ (detectionRange)
+        // Vùng phát hiện player giới hạn trong khoảng nhỏ (detectionRange) hoặc đã bị kích động (isAggroed)
         if (distance <= detectionRange || isAggroed)
         {
             isAggroed = true;
 
-            // Nếu player chạy thoát vượt quá loseTargetRange, zombie mất dấu và dừng lại
+            // Nếu player chạy thoát vượt quá loseTargetRange, zombie mất dấu và quay lại đi dạo ngẫu nhiên
             if (distance > loseTargetRange)
             {
                 isAggroed = false;
-                agent.isStopped = true;
                 agent.ResetPath();
+                isWaitingAtPoint = true;
+                wanderTimer = Random.Range(minWanderWaitTime, maxWanderWaitTime);
             }
             else if (distance > attackDistance)
             {
                 agent.isStopped = false;
                 agent.SetDestination(target.position);
                 agent.speed = Runner ? runSpeed : walkSpeed;
+                anim.SetBool("Run", Runner);
             }
             else
             {
@@ -228,18 +320,111 @@ public class ZombieAI : MonoBehaviour
         }
         else
         {
-            // Player ngoài tầm phát hiện: zombie đứng yên
-            agent.isStopped = true;
-            agent.ResetPath();
+            // PLAYER Ở NGOÀI VÙNG PHÁT HIỆN: ZOMBIE DI CHUYỂN NGẪU NHIÊN (WANDER)
+            anim.SetBool("Run", false);
+
+            if (enableWander)
+            {
+                UpdateWanderState();
+            }
+            else
+            {
+                agent.isStopped = true;
+                agent.ResetPath();
+            }
         }
         
         anim.SetFloat("Speed", agent.velocity.magnitude);
-        anim.SetBool("Run", Runner);
 
         if (currentHealth <= 0 && !dead)
         {
             Die();
         }
+    }
+
+    // Logic di chuyển ngẫu nhiên (Wander / Roam) khi player chưa vào tầm
+    void UpdateWanderState()
+    {
+        if (isWaitingAtPoint)
+        {
+            agent.isStopped = true;
+            wanderTimer -= Time.deltaTime;
+            if (wanderTimer <= 0f)
+            {
+                StartNewWander();
+            }
+        }
+        else
+        {
+            wanderMoveTimeout -= Time.deltaTime;
+
+            // Kiểm tra xem đã đến điểm đích chưa hoặc bị kẹt quá thời gian
+            if ((!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.3f) || wanderMoveTimeout <= 0f)
+            {
+                isWaitingAtPoint = true;
+                agent.isStopped = true;
+                wanderTimer = Random.Range(minWanderWaitTime, maxWanderWaitTime);
+            }
+            else
+            {
+                agent.isStopped = false;
+                agent.speed = wanderSpeed;
+            }
+        }
+    }
+
+    void StartNewWander()
+    {
+        Vector3 newPoint;
+        if (GetRandomWanderPoint(out newPoint))
+        {
+            isWaitingAtPoint = false;
+            wanderMoveTimeout = 10f; // Tối đa 10s cho một hành trình đi dạo
+            agent.isStopped = false;
+            agent.speed = wanderSpeed;
+            agent.SetDestination(newPoint);
+        }
+        else
+        {
+            isWaitingAtPoint = true;
+            wanderTimer = Random.Range(minWanderWaitTime, maxWanderWaitTime);
+        }
+    }
+
+    bool GetRandomWanderPoint(out Vector3 result)
+    {
+        // Ưu tiên tìm điểm ngẫu nhiên xung quanh khu vực ban đầu của zombie
+        Vector3 center = (initialPosition != Vector3.zero) ? initialPosition : transform.position;
+
+        for (int i = 0; i < 5; i++)
+        {
+            Vector2 randCircle = Random.insideUnitCircle * wanderRadius;
+            Vector3 randomPos = center + new Vector3(randCircle.x, 0, randCircle.y);
+
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(randomPos, out hit, wanderRadius, NavMesh.AllAreas))
+            {
+                result = hit.position;
+                return true;
+            }
+        }
+
+        // Dự phòng: Tìm điểm ngẫu nhiên xung quanh vị trí hiện tại
+        for (int i = 0; i < 5; i++)
+        {
+            Vector2 randCircle = Random.insideUnitCircle * wanderRadius;
+            Vector3 randomPos = transform.position + new Vector3(randCircle.x, 0, randCircle.y);
+
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(randomPos, out hit, 5f, NavMesh.AllAreas))
+            {
+                result = hit.position;
+                return true;
+            }
+        }
+
+        result = transform.position;
+        return false;
     }
 
     void Die()
@@ -248,6 +433,7 @@ public class ZombieAI : MonoBehaviour
 
         dead = true;
         currentHealth = 0;
+        isHealthBarVisible = false;
 
         if (flashCoroutine != null)
         {
@@ -256,7 +442,6 @@ public class ZombieAI : MonoBehaviour
         }
 
         // Bổ sung code từ commit cũ: biểu thị màu đỏ khi chết
-        // (Commit 648de30: GetComponent<MeshRenderer>().material.color = Color.red;)
         ApplyColorToMaterials(hitColor);
 
         if (PlayerLevelSystem.Instance != null)
@@ -294,7 +479,8 @@ public class ZombieAI : MonoBehaviour
         // HIỆU ỨNG MÀU ĐỎ BIỂU THỊ ZOMBIE BỊ TRỪ MÁU (Theo yêu cầu khôi phục từ commit cũ)
         TriggerHitFlash();
 
-        // MỖI KHI BỊ GIẢM MÁU THÌ HIỆN THANH MÁU LÊN
+        // MỖI KHI BỊ GIẢM MÁU THÌ KÍCH HOẠT HIỂN THỊ THANH MÁU TRÊN ĐẦU
+        isHealthBarVisible = true;
         if (instantiatedHealthUI != null)
         {
             instantiatedHealthUI.SetActive(true);

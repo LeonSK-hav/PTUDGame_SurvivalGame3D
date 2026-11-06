@@ -3334,7 +3334,7 @@ MonoBehaviour:
   expReward: 20
   healthUIPrefab: {fileID: 122474678574262834, guid: 0d79d153e99299f4c9e2e990d73fe86f,
     type: 3}
-  headOffset: {x: 1.7, y: 2.2, z: 0}
+  headOffset: {x: 0, y: 2.2, z: 0}
   damageAmount: 10
   attackDistance: 2
   attackCooldown: 1.2
@@ -21913,7 +21913,7 @@ MonoBehaviour:
   expReward: 20
   healthUIPrefab: {fileID: 122474678574262834, guid: 0d79d153e99299f4c9e2e990d73fe86f,
     type: 3}
-  headOffset: {x: 1.7, y: 2.2, z: 0}
+  headOffset: {x: 0, y: 2.2, z: 0}
   damageAmount: 10
   attackDistance: 2
   attackCooldown: 1.2
@@ -25799,7 +25799,7 @@ MonoBehaviour:
   expReward: 20
   healthUIPrefab: {fileID: 122474678574262834, guid: 0d79d153e99299f4c9e2e990d73fe86f,
     type: 3}
-  headOffset: {x: 1.7, y: 2.2, z: 0}
+  headOffset: {x: 0, y: 2.2, z: 0}
   damageAmount: 10
   attackDistance: 2
   attackCooldown: 1.2
@@ -47423,7 +47423,7 @@ MonoBehaviour:
   expReward: 20
   healthUIPrefab: {fileID: 122474678574262834, guid: 0d79d153e99299f4c9e2e990d73fe86f,
     type: 3}
-  headOffset: {x: 1.7, y: 2.2, z: 0}
+  headOffset: {x: 0, y: 2.2, z: 0}
   damageAmount: 10
   attackDistance: 2
   attackCooldown: 1.2
@@ -57542,7 +57542,7 @@ MonoBehaviour:
   expReward: 20
   healthUIPrefab: {fileID: 122474678574262834, guid: 0d79d153e99299f4c9e2e990d73fe86f,
     type: 3}
-  headOffset: {x: 1.7, y: 2.2, z: 0}
+  headOffset: {x: 0, y: 2.2, z: 0}
   damageAmount: 10
   attackDistance: 2
   attackCooldown: 1.2
