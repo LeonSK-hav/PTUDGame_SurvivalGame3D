@@ -36,7 +36,7 @@ public class WeaponController : MonoBehaviour
     {
         bool gameplayInputBlocked =
             (UIManager.Instance != null && UIManager.Instance.IsGameplayInputBlocked) ||
-            Cursor.visible || Cursor.lockState != CursorLockMode.Locked;
+            Cursor.visible || CursorLockMode.Locked != Cursor.lockState;
 
         if (!gameplayInputBlocked &&
             (InputManager.Instance.playerInput.Player.Fire.WasPressedThisFrame() ||
@@ -79,8 +79,8 @@ public class WeaponController : MonoBehaviour
         RaycastHit hit;
         if(Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, BulletRange, shootingMask))
         {
-            Target t = hit.collider.GetComponent<Target>();
-            ZombieAI z = hit.collider.GetComponent<ZombieAI>();
+            Target t = hit.collider.GetComponent<Target>() ?? hit.collider.GetComponentInParent<Target>();
+            ZombieAI z = hit.collider.GetComponent<ZombieAI>() ?? hit.collider.GetComponentInParent<ZombieAI>();
             Debug.Log(hit.collider.name);
 
             if (t != null)

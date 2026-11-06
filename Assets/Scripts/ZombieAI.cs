@@ -32,6 +32,15 @@ public class ZombieAI : MonoBehaviour
     public float attackCooldown = 1.2f;
     public float hitDuration = 0.4f;
 
+    [Header("Detection & Movement")]
+    public float detectionRange = 15f;    // Vùng phát hiện player giới hạn trong khoảng nhỏ
+    public float loseTargetRange = 25f;   // Khoảng cách mất dấu player
+    private bool isAggroed = false;
+
+    [Header("Hit Flash Effect (Red on Damage)")]
+    public Color hitColor = Color.red;    // Hiệu ứng màu đỏ biểu thị zombie bị trừ máu (theo commit cũ)
+    public float flashDuration = 0.2f;
+
     float nextAttackTime;
 
     private NavMeshAgent agent;
@@ -41,6 +50,16 @@ public class ZombieAI : MonoBehaviour
     bool hit;
     private Camera mainCamera;
     private Canvas mainCanvas;
+
+    private struct MaterialColorData
+    {
+        public Material material;
+        public Color originalColor;
+        public string propName;
+    }
+
+    private List<MaterialColorData> materialColorDataList = new List<MaterialColorData>();
+    private Coroutine flashCoroutine;
 
     private void Start()
     {
@@ -66,13 +85,27 @@ public class ZombieAI : MonoBehaviour
             return;
         }
 
-        agent.SetDestination(target.position);
         agent.speed = Runner ? runSpeed : walkSpeed;
+
+        // Giới hạn tầm phát hiện ngay từ ban đầu: chỉ di chuyển nếu player nằm trong detectionRange
+        float initialDistance = Vector3.Distance(transform.position, target.position);
+        if (initialDistance <= detectionRange)
+        {
+            isAggroed = true;
+            agent.SetDestination(target.position);
+        }
+        else
+        {
+            agent.isStopped = true;
+        }
 
         mainCamera = Camera.main;
 
+        // Lưu trữ Renderers và Material để đổi màu đỏ khi nhận sát thương
+        InitializeHitFlashMaterials();
+
         // Tự động tìm Canvas chính trong Scene
-        Canvas[] canvases = FindObjectsOfType<Canvas>();
+        Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
         foreach (var canvas in canvases)
         {
             if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
@@ -86,7 +119,6 @@ public class ZombieAI : MonoBehaviour
         // Tự động sinh ra bản sao thanh máu
         if (healthUIPrefab != null && mainCanvas != null)
         {
-            // THÊM chữ 'false' vào cuối để giữ đúng hệ tọa độ cục bộ của UI Canvas
             instantiatedHealthUI = Instantiate(healthUIPrefab, mainCanvas.transform, false);
             
             healthSlider = instantiatedHealthUI.GetComponentInChildren<Slider>();
@@ -94,6 +126,36 @@ public class ZombieAI : MonoBehaviour
 
             instantiatedHealthUI.SetActive(false);
             UpdateHealthUI();
+        }
+    }
+
+    // Khởi tạo danh sách material để tạo hiệu ứng nhấp nháy đỏ khi bị bắn
+    void InitializeHitFlashMaterials()
+    {
+        materialColorDataList.Clear();
+        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        foreach (var rend in renderers)
+        {
+            if (rend is ParticleSystemRenderer) continue;
+
+            foreach (var mat in rend.materials)
+            {
+                if (mat == null) continue;
+
+                string prop = null;
+                if (mat.HasProperty("_BaseColor")) prop = "_BaseColor";
+                else if (mat.HasProperty("_Color")) prop = "_Color";
+
+                if (prop != null)
+                {
+                    materialColorDataList.Add(new MaterialColorData
+                    {
+                        material = mat,
+                        originalColor = mat.GetColor(prop),
+                        propName = prop
+                    });
+                }
+            }
         }
     }
 
@@ -116,7 +178,6 @@ public class ZombieAI : MonoBehaviour
 
                 if (rectTransform != null && canvasRect != null)
                 {
-                    // Ép vị trí của thanh máu đi theo tọa độ local của Canvas chính một cách chính xác tuyệt đối
                     Vector2 localPoint;
                     RectTransformUtility.ScreenPointToLocalPointInRectangle(
                         canvasRect,
@@ -127,7 +188,6 @@ public class ZombieAI : MonoBehaviour
                     rectTransform.anchoredPosition = localPoint;
                 }
 
-                // Luôn giữ Scale bằng 1 để thanh máu không bị phóng to hay thu nhỏ bất thường
                 instantiatedHealthUI.transform.localScale = Vector3.one;
             }
             else
@@ -142,16 +202,35 @@ public class ZombieAI : MonoBehaviour
         if (dead) return;
         float distance = Vector3.Distance(transform.position, target.position);
 
-        if (distance > attackDistance)
+        // Vùng phát hiện player giới hạn trong khoảng nhỏ (detectionRange)
+        if (distance <= detectionRange || isAggroed)
         {
-            agent.isStopped = false;
-            agent.SetDestination(target.position);
-            agent.speed = Runner ? runSpeed : walkSpeed;
+            isAggroed = true;
+
+            // Nếu player chạy thoát vượt quá loseTargetRange, zombie mất dấu và dừng lại
+            if (distance > loseTargetRange)
+            {
+                isAggroed = false;
+                agent.isStopped = true;
+                agent.ResetPath();
+            }
+            else if (distance > attackDistance)
+            {
+                agent.isStopped = false;
+                agent.SetDestination(target.position);
+                agent.speed = Runner ? runSpeed : walkSpeed;
+            }
+            else
+            {
+                agent.isStopped = true;
+                TryAttack();
+            }
         }
         else
         {
+            // Player ngoài tầm phát hiện: zombie đứng yên
             agent.isStopped = true;
-            TryAttack();
+            agent.ResetPath();
         }
         
         anim.SetFloat("Speed", agent.velocity.magnitude);
@@ -163,14 +242,22 @@ public class ZombieAI : MonoBehaviour
         }
     }
 
-    
-
     void Die()
     {
         if (dead) return;
 
         dead = true;
         currentHealth = 0;
+
+        if (flashCoroutine != null)
+        {
+            StopCoroutine(flashCoroutine);
+            flashCoroutine = null;
+        }
+
+        // Bổ sung code từ commit cũ: biểu thị màu đỏ khi chết
+        // (Commit 648de30: GetComponent<MeshRenderer>().material.color = Color.red;)
+        ApplyColorToMaterials(hitColor);
 
         if (PlayerLevelSystem.Instance != null)
         {
@@ -198,8 +285,14 @@ public class ZombieAI : MonoBehaviour
     {
         if (dead) return;
 
+        // Khi bị bắn trúng, zombie sẽ lập tức phát hiện và truy đuổi player
+        isAggroed = true;
+
         currentHealth -= Damage;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+
+        // HIỆU ỨNG MÀU ĐỎ BIỂU THỊ ZOMBIE BỊ TRỪ MÁU (Theo yêu cầu khôi phục từ commit cũ)
+        TriggerHitFlash();
 
         // MỖI KHI BỊ GIẢM MÁU THÌ HIỆN THANH MÁU LÊN
         if (instantiatedHealthUI != null)
@@ -218,6 +311,55 @@ public class ZombieAI : MonoBehaviour
 
         anim.SetTrigger("hit");
         StartCoroutine(HitDuration());
+    }
+
+    void TriggerHitFlash()
+    {
+        if (dead) return;
+
+        if (flashCoroutine != null)
+        {
+            StopCoroutine(flashCoroutine);
+            ResetMaterialColors();
+        }
+        flashCoroutine = StartCoroutine(FlashRedRoutine());
+    }
+
+    IEnumerator FlashRedRoutine()
+    {
+        ApplyColorToMaterials(hitColor);
+
+        yield return new WaitForSeconds(flashDuration);
+
+        if (!dead)
+        {
+            ResetMaterialColors();
+        }
+        flashCoroutine = null;
+    }
+
+    void ApplyColorToMaterials(Color color)
+    {
+        for (int i = 0; i < materialColorDataList.Count; i++)
+        {
+            var data = materialColorDataList[i];
+            if (data.material != null)
+            {
+                data.material.SetColor(data.propName, color);
+            }
+        }
+    }
+
+    void ResetMaterialColors()
+    {
+        for (int i = 0; i < materialColorDataList.Count; i++)
+        {
+            var data = materialColorDataList[i];
+            if (data.material != null)
+            {
+                data.material.SetColor(data.propName, data.originalColor);
+            }
+        }
     }
 
     void UpdateHealthUI()
@@ -255,7 +397,10 @@ public class ZombieAI : MonoBehaviour
         hit = true;
         agent.isStopped = true;
         yield return new WaitForSeconds(hitDuration);
-        agent.isStopped = false;
+        if (!dead && isAggroed)
+        {
+            agent.isStopped = false;
+        }
         hit = false;
     }
 }
