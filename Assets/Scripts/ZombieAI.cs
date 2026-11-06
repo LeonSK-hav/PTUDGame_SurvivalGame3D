@@ -72,6 +72,13 @@ public class ZombieAI : MonoBehaviour
     public Color hitColor = Color.red;    // Hiệu ứng màu đỏ biểu thị zombie bị trừ máu (theo commit cũ)
     public float flashDuration = 0.2f;
 
+    [Header("Item Drop System (Cơ chế rơi đồ khi chết)")]
+    public bool enableItemDrop = true;
+    public ItemData[] availableDropPool;       // Danh sách vật phẩm có thể rơi (tự động nạp nếu để trống)
+    public GameObject defaultWorldItemPrefab;  // Prefab rơi ra thế giới (mặc định WorldItem_Prefab)
+    [Range(0, 4)] public int maxDropLimit = 4; // Giới hạn số lượng rơi tối đa (tối đa 4 món)
+    private bool hasDroppedLoot = false;
+
     float nextAttackTime;
 
     private NavMeshAgent agent;
@@ -614,6 +621,9 @@ public class ZombieAI : MonoBehaviour
             Debug.LogError("Không tìm thấy PlayerLevelSystem để cộng EXP khi Zombie chết.", this);
         }
 
+        // KÍCH HOẠT HỆ THỐNG RƠI ĐỒ KHI ZOMBIE CHẾT
+        DropLoot();
+
         agent.ResetPath();
         agent.speed = 0;
         anim.SetBool("Death", true);
@@ -767,4 +777,409 @@ public class ZombieAI : MonoBehaviour
         }
         hit = false;
     }
+
+    #region Zombie Item Drop System (Cơ chế rơi đồ khi Zombie chết)
+
+    private void EnsureDropPoolLoaded()
+    {
+        if (availableDropPool != null && availableDropPool.Length > 0 && defaultWorldItemPrefab != null)
+        {
+            return;
+        }
+
+#if UNITY_EDITOR
+        if (availableDropPool == null || availableDropPool.Length == 0)
+        {
+            string[] guids = UnityEditor.AssetDatabase.FindAssets("t:ItemData", new[] { "Assets/Items" });
+            List<ItemData> loadedList = new List<ItemData>();
+            foreach (string guid in guids)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                ItemData item = UnityEditor.AssetDatabase.LoadAssetAtPath<ItemData>(path);
+                if (item != null && !loadedList.Contains(item))
+                {
+                    loadedList.Add(item);
+                }
+            }
+            if (loadedList.Count > 0)
+            {
+                availableDropPool = loadedList.ToArray();
+            }
+        }
+
+        if (defaultWorldItemPrefab == null)
+        {
+            defaultWorldItemPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefab/WorldItem_Prefab.prefab");
+        }
+#endif
+
+        if (defaultWorldItemPrefab == null)
+        {
+            var invMgr = FindFirstObjectByType<InventoryManager>();
+            if (invMgr != null)
+            {
+                defaultWorldItemPrefab = invMgr.worldItemPrefab;
+            }
+        }
+
+        // Dự phòng lúc runtime nếu pool vẫn rỗng: tìm từ ShopManager nếu có
+        if (availableDropPool == null || availableDropPool.Length == 0)
+        {
+            var shopMgr = FindFirstObjectByType<ShopManager>();
+            if (shopMgr != null && shopMgr.shopItems != null)
+            {
+                List<ItemData> fallbackList = new List<ItemData>();
+                foreach (var shopItem in shopMgr.shopItems)
+                {
+                    if (shopItem != null && shopItem.itemData != null && !fallbackList.Contains(shopItem.itemData))
+                    {
+                        fallbackList.Add(shopItem.itemData);
+                    }
+                }
+                if (fallbackList.Count > 0)
+                {
+                    availableDropPool = fallbackList.ToArray();
+                }
+            }
+        }
+    }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (!Application.isPlaying && (availableDropPool == null || availableDropPool.Length == 0 || defaultWorldItemPrefab == null))
+        {
+            EnsureDropPoolLoaded();
+        }
+    }
+#endif
+
+    public void DropLoot()
+    {
+        if (!enableItemDrop || hasDroppedLoot) return;
+        hasDroppedLoot = true;
+
+        EnsureDropPoolLoaded();
+
+        if (availableDropPool == null || availableDropPool.Length == 0)
+        {
+            Debug.LogWarning($"[Zombie Drop] Không có vật phẩm nào trong Drop Pool của {GetZombieDisplayName()}.", this);
+            return;
+        }
+
+        int dropCount = CalculateDropCount(zombieType);
+        dropCount = Mathf.Clamp(dropCount, 0, maxDropLimit);
+
+        if (dropCount <= 0)
+        {
+            Debug.Log($"<color=grey>[Zombie Drop] {GetZombieDisplayName()} không rơi ra món đồ nào (Tỉ lệ 0 món).</color>");
+            return;
+        }
+
+        List<string> droppedNames = new List<string>();
+
+        for (int i = 0; i < dropCount; i++)
+        {
+            ItemData selectedItem = SelectDropItem(zombieType);
+            if (selectedItem == null) continue;
+
+            // Xác định số lượng của vật phẩm rơi
+            int amount = 1;
+            if (selectedItem.ammoType != AmmoType.None)
+            {
+                // Nếu là đạn, rơi số lượng lớn dựa theo cấp độ zombie
+                switch (zombieType)
+                {
+                    case ZombieType.Boss:
+                        amount = Random.Range(30, 60);
+                        break;
+                    case ZombieType.Medium:
+                        amount = Random.Range(15, 30);
+                        break;
+                    default: // Normal
+                        amount = Random.Range(8, 16);
+                        break;
+                }
+                amount = Mathf.Min(amount, selectedItem.maxStack > 0 ? selectedItem.maxStack : 99);
+            }
+
+            // Tính vị trí spawn rơi đồ xung quanh zombie (có độ lệch ngẫu nhiên)
+            Vector3 randomOffset = new Vector3(Random.Range(-0.6f, 0.6f), 0.5f + (i * 0.15f), Random.Range(-0.6f, 0.6f));
+            Vector3 spawnPos = transform.position + randomOffset;
+
+            // Ưu tiên prefab riêng của itemData, nếu không có thì lấy defaultWorldItemPrefab hoặc từ InventoryManager
+            GameObject prefabToSpawn = selectedItem.worldItemPrefab != null ? selectedItem.worldItemPrefab : defaultWorldItemPrefab;
+            if (prefabToSpawn == null)
+            {
+                var invMgr = FindFirstObjectByType<InventoryManager>();
+                if (invMgr != null) prefabToSpawn = invMgr.worldItemPrefab;
+            }
+
+            if (prefabToSpawn != null)
+            {
+                GameObject droppedObj = Instantiate(prefabToSpawn, spawnPos, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f));
+                WorldItem worldItemComp = droppedObj.GetComponent<WorldItem>();
+                if (worldItemComp != null)
+                {
+                    worldItemComp.Init(selectedItem, amount);
+                }
+
+                // Tạo lực nảy nhẹ tung ra xung quanh cho vật phẩm trông sinh động
+                Rigidbody rb = droppedObj.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    Vector3 burstDir = new Vector3(Random.Range(-1.5f, 1.5f), Random.Range(2.5f, 4.5f), Random.Range(-1.5f, 1.5f));
+                    rb.AddForce(burstDir, ForceMode.Impulse);
+                }
+
+                droppedNames.Add($"{selectedItem.itemName} x{amount} (Giá: {selectedItem.Price})");
+            }
+            else
+            {
+                Debug.LogWarning($"[Zombie Drop] Không tìm thấy Prefab WorldItem hợp lệ để rơi {selectedItem.itemName}.", this);
+            }
+        }
+
+        if (droppedNames.Count > 0)
+        {
+            Debug.Log($"<color=green><b>[Zombie Drop] {GetZombieDisplayName()} rơi ra {droppedNames.Count} món đồ:</b> {string.Join(", ", droppedNames)}</color>");
+        }
+    }
+
+    int CalculateDropCount(ZombieType type)
+    {
+        float roll = Random.value;
+        int count = 0;
+
+        switch (type)
+        {
+            case ZombieType.Boss:
+                // Boss Zombie: Rơi nhiều nhất, chắc chắn có đồ từ 1 đến 4 món (Max = 4)
+                // 1 món: 5%, 2 món: 30%, 3 món: 35%, 4 món: 30%
+                if (roll < 0.05f) count = 1;
+                else if (roll < 0.35f) count = 2;
+                else if (roll < 0.70f) count = 3;
+                else count = 4;
+                break;
+
+            case ZombieType.Medium:
+                // Medium Zombie: Rơi từ 0 đến 3 món (90% rơi đồ, 10% trắng tay)
+                // 0 món: 10%, 1 món: 40%, 2 món: 35%, 3 món: 15%
+                if (roll < 0.10f) count = 0;
+                else if (roll < 0.50f) count = 1;
+                else if (roll < 0.85f) count = 2;
+                else count = 3;
+                break;
+
+            default: // Normal
+                // Normal Zombie: Rơi ít nhất, từ 0 đến 2 món (60% rơi đồ, 40% không rơi)
+                // 0 món: 40%, 1 món: 45%, 2 món: 15%
+                if (roll < 0.40f) count = 0;
+                else if (roll < 0.85f) count = 1;
+                else count = 2;
+                break;
+        }
+
+        return Mathf.Clamp(count, 0, maxDropLimit);
+    }
+
+    ItemData SelectDropItem(ZombieType type)
+    {
+        // 1. Phân loại toàn bộ item trong availableDropPool theo 4 cấp bậc (từ thấp đến cao):
+        // Thức ăn (Food) -> Đạn (Ammo) -> Vũ khí (Weapon) -> Trang bị (Equipment)
+        List<ItemData> equipmentList = new List<ItemData>();
+        List<ItemData> weaponList = new List<ItemData>();
+        List<ItemData> ammoList = new List<ItemData>();
+        List<ItemData> foodList = new List<ItemData>();
+
+        for (int i = 0; i < availableDropPool.Length; i++)
+        {
+            ItemData item = availableDropPool[i];
+            if (item == null) continue;
+
+            if (IsEquipment(item))
+            {
+                equipmentList.Add(item);
+            }
+            else if (IsWeapon(item))
+            {
+                weaponList.Add(item);
+            }
+            else if (IsAmmo(item))
+            {
+                ammoList.Add(item);
+            }
+            else
+            {
+                foodList.Add(item);
+            }
+        }
+
+        // 2. Duyệt tỉ lệ THEO CHIỀU TỪ TRÊN XUỐNG DƯỚI (Top-Down Evaluation)
+        // Trang bị (Level cao nhất) -> Vũ khí -> Đạn -> Thức ăn (Level thấp nhất)
+        // Chất lượng phụ thuộc vào Cấp độ Zombie (Boss > Medium > Normal)
+
+        float equipChance = 0.015f;
+        float weaponChance = 0.08f;
+        float ammoChance = 0.35f;
+
+        switch (type)
+        {
+            case ZombieType.Boss:
+                equipChance = 0.30f;   // Boss: 30% cơ hội nổ Trang bị xịn
+                weaponChance = 0.55f;  // Nếu hụt trang bị, 55% nổ Vũ khí hạng nặng
+                ammoChance = 0.60f;    // Nếu hụt vũ khí, 60% nổ nhiều Đạn
+                break;
+
+            case ZombieType.Medium:
+                equipChance = 0.10f;   // Medium: 10% cơ hội Trang bị
+                weaponChance = 0.30f;  // 30% cơ hội Vũ khí
+                ammoChance = 0.50f;    // 50% cơ hội Đạn
+                break;
+
+            default: // Normal
+                equipChance = 0.015f;  // Normal: 1.5% cơ hội Trang bị (cực hiếm)
+                weaponChance = 0.08f;  // 8% cơ hội Vũ khí (hiếm)
+                ammoChance = 0.35f;    // 35% cơ hội Đạn
+                break;
+        }
+
+        List<ItemData> targetList = null;
+
+        // BƯỚC 1: Duyệt Trang bị (Cao nhất)
+        if (equipmentList.Count > 0 && Random.value < equipChance)
+        {
+            targetList = equipmentList;
+        }
+        // BƯỚC 2: Duyệt Vũ khí (Kế tiếp)
+        else if (weaponList.Count > 0 && Random.value < weaponChance)
+        {
+            targetList = weaponList;
+        }
+        // BƯỚC 3: Duyệt Đạn (Kế tiếp)
+        else if (ammoList.Count > 0 && Random.value < ammoChance)
+        {
+            targetList = ammoList;
+        }
+        // BƯỚC 4: Duyệt Thức ăn (Cơ bản nhất)
+        else if (foodList.Count > 0)
+        {
+            targetList = foodList;
+        }
+        else
+        {
+            // Dự phòng nếu các list trên đều rỗng thì dùng bất kỳ item nào có sẵn
+            targetList = new List<ItemData>(availableDropPool);
+        }
+
+        if (targetList == null || targetList.Count == 0) return null;
+
+        // 3. TÍNH TỈ LỆ TRONG MỖI LOẠI DỰA THEO GIÁ TIỀN (Price Weighting)
+        return PickItemByPriceWeight(targetList, type);
+    }
+
+    ItemData PickItemByPriceWeight(List<ItemData> items, ZombieType type)
+    {
+        if (items.Count == 1) return items[0];
+
+        float totalWeight = 0f;
+        float[] weights = new float[items.Count];
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            weights[i] = GetPriceWeight(items[i], type);
+            totalWeight += weights[i];
+        }
+
+        if (totalWeight <= 0f) return items[Random.Range(0, items.Count)];
+
+        float roll = Random.Range(0f, totalWeight);
+        float cumulative = 0f;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            cumulative += weights[i];
+            if (roll <= cumulative)
+            {
+                return items[i];
+            }
+        }
+
+        return items[items.Count - 1];
+    }
+
+    float GetPriceWeight(ItemData item, ZombieType type)
+    {
+        if (item == null) return 1f;
+
+        int price = Mathf.Max(10, item.Price);
+
+        switch (type)
+        {
+            case ZombieType.Boss:
+                // Boss ưu tiên rơi đồ xịn, đắt giá cao (Trọng số tăng mạnh theo giá tiền)
+                return Mathf.Pow(price, 1.25f);
+
+            case ZombieType.Medium:
+                // Zombie Trung phân bố đều, cân bằng giá cả
+                return Mathf.Sqrt(price) * 10f;
+
+            default: // Normal
+                // Zombie Thường ưu tiên rơi đồ rẻ tiền, phổ thông (Trọng số nghịch đảo với giá tiền)
+                return 10000f / (float)price;
+        }
+    }
+
+    bool IsEquipment(ItemData item)
+    {
+        if (item == null) return false;
+        if (item.equipmentType == EquipmentType.Helmet ||
+            item.equipmentType == EquipmentType.Armor ||
+            item.equipmentType == EquipmentType.Pants ||
+            item.equipmentType == EquipmentType.Boots ||
+            item.equipmentType == EquipmentType.Accessories)
+        {
+            return true;
+        }
+        return item.itemType == ItemType.Equipment && item.equipmentType != EquipmentType.Weapon;
+    }
+
+    bool IsWeapon(ItemData item)
+    {
+        if (item == null) return false;
+        if (item.equipmentType == EquipmentType.Weapon) return true;
+        return item.itemType == ItemType.Permanent && !IsEquipment(item);
+    }
+
+    bool IsAmmo(ItemData item)
+    {
+        if (item == null) return false;
+        return item.ammoType != AmmoType.None;
+    }
+
+    bool IsFood(ItemData item)
+    {
+        if (item == null) return false;
+        return item.itemType == ItemType.Consumable && item.ammoType == AmmoType.None && item.equipmentType == EquipmentType.None;
+    }
+
+    public string GetZombieDisplayName()
+    {
+        if (!string.IsNullOrEmpty(customZombieName)) return customZombieName;
+        switch (zombieType)
+        {
+            case ZombieType.Boss: return "★ BOSS ZOMBIE CHÚA ★";
+            case ZombieType.Medium: return "[Trung Cấp] Zombie Nhanh";
+            default: return "Zombie Thường";
+        }
+    }
+
+    [ContextMenu("Test Drop Loot (Thử Nghiệm Rơi Đồ)")]
+    public void ContextTestDropLoot()
+    {
+        hasDroppedLoot = false;
+        DropLoot();
+    }
+
+    #endregion
 }
