@@ -58,6 +58,11 @@ public class PlayerLevelSystem : MonoBehaviour
         UpdateLevelUI();
     }
 
+    public void AddExperience(float amount)
+    {
+        AddExp(amount);
+    }
+
     private void LevelUp()
     {
         level++;

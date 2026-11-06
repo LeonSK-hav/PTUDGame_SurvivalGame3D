@@ -38,6 +38,50 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
     private GameObject draggedIconClone;         // Bản sao icon đi theo chuột khi kéo thả
     private CanvasGroup cloneCanvasGroup;
 
+    private static InventoryManager _instance;
+    public static InventoryManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindFirstObjectByType<InventoryManager>(FindObjectsInactive.Include);
+            }
+            if (_instance != null)
+            {
+                _instance.InitSlotsIfNeeded();
+            }
+            return _instance;
+        }
+        private set
+        {
+            _instance = value;
+        }
+    }
+
+    private void Awake()
+    {
+        if (_instance == null || _instance == this)
+        {
+            _instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        InitSlotsIfNeeded();
+    }
+
+    private void OnDestroy()
+    {
+        if (_instance == this)
+        {
+            _instance = null;
+        }
+    }
+
     private void OnEnable()
     {
         if (UIManager.Instance != null)
@@ -98,11 +142,51 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
             playerHealth = FindFirstObjectByType<PlayerHealth>();
         }
 
+#if UNITY_EDITOR
+        AddInitialTestItemsIfNeeded();
+#endif
+
         RefreshUI();
     }
-    // Hàm đảm bảo danh sách slots luôn sẵn sàng dù Inventory chưa mở
-    private void InitSlotsIfNeeded()
+
+    private void AddInitialTestItemsIfNeeded()
     {
+        bool hasAnyItem = false;
+        if (slots != null)
+        {
+            foreach (var s in slots)
+            {
+                if (s != null && s.itemData != null && s.count > 0)
+                {
+                    hasAnyItem = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasAnyItem)
+        {
+#if UNITY_EDITOR
+            ItemData gunItem = UnityEditor.AssetDatabase.LoadAssetAtPath<ItemData>("Assets/Items/M1911.asset");
+            ItemData ammoItem = UnityEditor.AssetDatabase.LoadAssetAtPath<ItemData>("Assets/Items/SM_Chuck_Pistol_Box_9.19.asset");
+            ItemData healthItem = UnityEditor.AssetDatabase.LoadAssetAtPath<ItemData>("Assets/Items/Apple_01.asset");
+
+            if (gunItem != null) AddItem(gunItem, 1);
+            if (ammoItem != null) AddItem(ammoItem, 32);
+            if (healthItem != null) AddItem(healthItem, 5);
+            Debug.Log("[InventoryManager] Đã tự động thêm đồ mẫu ban đầu (1 Súng M1911, 32 Viên đạn 9x19mm, 5 Quả táo) để test!");
+#endif
+        }
+    }
+
+    private bool isInitialized = false;
+
+    // Hàm đảm bảo danh sách slots luôn sẵn sàng dù Inventory chưa mở
+    public void InitSlotsIfNeeded()
+    {
+        if (isInitialized) return;
+        isInitialized = true;
+
         if (slots == null)
         {
             slots = new List<InventorySlot>();
@@ -118,6 +202,10 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         {
             slots[i] ??= new InventorySlot();
         }
+
+#if UNITY_EDITOR
+        AddInitialTestItemsIfNeeded();
+#endif
     }
     // Thêm vật phẩm vào kho
     public bool AddItem(ItemData newItem, int amount)
@@ -181,6 +269,138 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
         RefreshUI();
         return true;
+    }
+
+    /// <summary>
+    /// Đếm tổng số lượng của một loại vật phẩm trong Inventory
+    /// </summary>
+    public int GetItemCount(ItemData item)
+    {
+        if (item == null || slots == null) return 0;
+
+        int total = 0;
+        for (int i = 0; i < slots.Count; i++)
+        {
+            if (slots[i] != null && slots[i].itemData != null && slots[i].count > 0)
+            {
+                if (slots[i].itemData == item || slots[i].itemData.itemName == item.itemName)
+                {
+                    total += slots[i].count;
+                }
+            }
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// Đếm tổng số lượng đạn theo AmmoType trong Inventory (hỗ trợ kiểm tra linh hoạt)
+    /// </summary>
+    public int GetAmmoCount(AmmoType ammoType)
+    {
+        if (ammoType == AmmoType.None || slots == null) return 0;
+
+        int total = 0;
+        for (int i = 0; i < slots.Count; i++)
+        {
+            if (slots[i] != null && slots[i].itemData != null && slots[i].itemData.ammoType == ammoType && slots[i].count > 0)
+            {
+                total += slots[i].count;
+            }
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// Trừ số lượng vật phẩm chỉ định khỏi kho đồ
+    /// </summary>
+    public bool RemoveItem(ItemData itemToRemove, int amount)
+    {
+        if (itemToRemove == null || amount <= 0 || slots == null) return false;
+
+        int currentTotal = GetItemCount(itemToRemove);
+        if (currentTotal < amount) return false;
+
+        int remainingToRemove = amount;
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var slot = slots[i];
+            if (slot != null && slot.itemData != null && slot.count > 0)
+            {
+                if (slot.itemData == itemToRemove || slot.itemData.itemName == itemToRemove.itemName)
+                {
+                    int take = Mathf.Min(remainingToRemove, slot.count);
+                    slot.count -= take;
+                    remainingToRemove -= take;
+
+                    if (slot.count <= 0)
+                    {
+                        slot.itemData = null;
+                        slot.count = 0;
+                    }
+
+                    if (remainingToRemove <= 0) break;
+                }
+            }
+        }
+
+        RefreshUI();
+        return true;
+    }
+
+    /// <summary>
+    /// Trừ đạn từ kho đồ (ưu tiên đúng loại item đạn hoặc bất kỳ item nào cùng AmmoType)
+    /// </summary>
+    public bool RemoveAmmo(ItemData preferredAmmoItem, AmmoType ammoType, int amount)
+    {
+        if (amount <= 0 || slots == null) return false;
+
+        // 1. Ưu tiên trừ đúng preferredAmmoItem nếu có đủ số lượng
+        if (preferredAmmoItem != null)
+        {
+            int count = GetItemCount(preferredAmmoItem);
+            if (count >= amount)
+            {
+                return RemoveItem(preferredAmmoItem, amount);
+            }
+            else if (count > 0)
+            {
+                // Trừ hết số lượng của preferredAmmoItem trước
+                RemoveItem(preferredAmmoItem, count);
+                amount -= count;
+            }
+        }
+
+        // 2. Trừ tiếp từ bất kỳ item nào có cùng ammoType
+        if (ammoType != AmmoType.None && amount > 0)
+        {
+            int available = GetAmmoCount(ammoType);
+            if (available < amount) return false;
+
+            int remaining = amount;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var slot = slots[i];
+                if (slot != null && slot.itemData != null && slot.itemData.ammoType == ammoType && slot.count > 0)
+                {
+                    int take = Mathf.Min(remaining, slot.count);
+                    slot.count -= take;
+                    remaining -= take;
+
+                    if (slot.count <= 0)
+                    {
+                        slot.itemData = null;
+                        slot.count = 0;
+                    }
+
+                    if (remaining <= 0) break;
+                }
+            }
+
+            RefreshUI();
+            return true;
+        }
+
+        return false;
     }
 
     public void RefreshUI()
@@ -275,18 +495,48 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
         if (btnUse != null)
         {
-            btnUse.gameObject.SetActive(slot.itemData.itemType != ItemType.Equipment);
+            bool isWeapon = IsWeaponItem(slot.itemData);
+            TextMeshProUGUI btnText = btnUse.GetComponentInChildren<TextMeshProUGUI>();
+            if (btnText != null)
+            {
+                btnText.text = isWeapon ? "Trang bị" : "Sử dụng";
+            }
+            btnUse.gameObject.SetActive(true);
         }
     }
 
-    // Nút Sử dụng vật phẩm
+    public bool IsWeaponItem(ItemData item)
+    {
+        if (item == null) return false;
+        return item.equipmentType == EquipmentType.Weapon ||
+               item.itemName == "M1911" ||
+               item.itemName.ToLower().Contains("gun") ||
+               item.itemName.ToLower().Contains("pistol") ||
+               item.itemName.ToLower().Contains("rifle") ||
+               item.itemName.ToLower().Contains("shotgun") ||
+               item.itemName.ToLower().Contains("knife") ||
+               item.itemName.ToLower().Contains("axe");
+    }
+
+    // Nút Sử dụng / Trang bị vật phẩm
     void OnUseItemButtonClicked()
     {
         if (selectedSlotIndex < 0 || selectedSlotIndex >= slots.Count) return;
         var slot = slots[selectedSlotIndex];
 
-        if (slot.itemData == null || slot.count <= 0 || slot.itemData.itemType == ItemType.Equipment) return;
+        if (slot.itemData == null || slot.count <= 0) return;
 
+        // 1. Nếu là vũ khí: Trang bị lên tay Player và chuyển khỏi túi đồ
+        if (IsWeaponItem(slot.itemData))
+        {
+            EquipWeaponFromInventory(slot.itemData, selectedSlotIndex);
+            return;
+        }
+
+        // 2. Nếu là trang bị khác (mũ, áo...): không dùng nút này
+        if (slot.itemData.itemType == ItemType.Equipment) return;
+
+        // 3. Nếu là đồ tiêu hao (thuốc, thức ăn...): áp dụng hiệu ứng và trừ số lượng
         if (!ApplyItemEffect(slot.itemData)) return;
 
         if (slot.itemData.itemType == ItemType.Consumable)
@@ -297,6 +547,61 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
                 slot.itemData = null;
                 slot.count = 0;
             }
+        }
+
+        RefreshUI();
+    }
+
+    private void EquipWeaponFromInventory(ItemData weaponItem, int slotIndex)
+    {
+        if (weaponItem == null) return;
+
+        PlayerLevelSystem levelSystem = PlayerLevelSystem.Instance != null ? PlayerLevelSystem.Instance : FindFirstObjectByType<PlayerLevelSystem>();
+        int currentLevel = levelSystem != null ? levelSystem.CurrentLevel : 1;
+
+        if (weaponItem.requiredLevel > currentLevel)
+        {
+            Debug.LogWarning($"[Inventory] Cần Level {weaponItem.requiredLevel} để trang bị {weaponItem.itemName}! (Level hiện tại: {currentLevel})");
+            return;
+        }
+
+        WeaponSwitcher switcher = WeaponSwitcher.Instance != null ? WeaponSwitcher.Instance : FindFirstObjectByType<WeaponSwitcher>();
+        if (switcher == null)
+        {
+            Debug.LogWarning("[Inventory] Không tìm thấy WeaponSwitcher trên Player để trang bị vũ khí!");
+            return;
+        }
+
+        bool success = switcher.EquipWeaponFromInventory(weaponItem);
+        if (success)
+        {
+            // Trừ 1 số lượng súng khỏi ô túi đồ vì đã lấy ra trang bị lên tay người chơi
+            if (slotIndex >= 0 && slotIndex < slots.Count)
+            {
+                var targetSlot = slots[slotIndex];
+                if (targetSlot != null && (targetSlot.itemData == weaponItem || (targetSlot.itemData != null && targetSlot.itemData.itemName == weaponItem.itemName)))
+                {
+                    targetSlot.count--;
+                    if (targetSlot.count <= 0)
+                    {
+                        targetSlot.itemData = null;
+                        targetSlot.count = 0;
+                    }
+                }
+            }
+
+            Debug.Log($"<color=green><b>[Inventory] Đã chuyển {weaponItem.itemName} từ túi đồ lên trang bị trên tay Player!</b></color>");
+
+            // Đóng bảng Inventory để người chơi thấy ngay súng ngoài thế giới
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.SetUIOpen(gameObject, false);
+            }
+            gameObject.SetActive(false);
+        }
+        else
+        {
+            Debug.LogWarning($"[Inventory] Không thể kích hoạt vũ khí {weaponItem.itemName} trong WeaponHolder!");
         }
 
         RefreshUI();

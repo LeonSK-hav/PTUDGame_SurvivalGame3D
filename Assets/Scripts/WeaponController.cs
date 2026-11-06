@@ -80,12 +80,21 @@ public class WeaponController : MonoBehaviour
         isReloading = false;
     }
 
+    [Header("Source Item")]
+    [Tooltip("Vật phẩm ItemData tương ứng khi trang bị từ Inventory")]
+    public ItemData sourceItemData;
+
     /// <summary>
     /// Khởi tạo hoặc cập nhật cấu hình súng từ ScriptableObject WeaponData
     /// </summary>
-    public void SetupWeapon(WeaponData data)
+    public void SetupWeapon(WeaponData data, ItemData item = null)
     {
         weaponData = data;
+        if (item != null)
+        {
+            sourceItemData = item;
+        }
+
         if (weaponData == null) return;
 
         BulletRange = weaponData.range;
@@ -113,6 +122,28 @@ public class WeaponController : MonoBehaviour
         {
             muzzleFlash = Instantiate(weaponData.muzzleFlashPrefab, transform);
         }
+    }
+
+    /// <summary>
+    /// Lấy ItemData của vũ khí này (dùng để trả lại túi đồ khi tháo trang bị)
+    /// </summary>
+    public ItemData GetSourceItemData()
+    {
+        if (sourceItemData != null) return sourceItemData;
+
+        string gName = weaponData != null ? weaponData.weaponName : name;
+        // Loại bỏ hậu tố (Clone) hoặc GUID nếu có
+        if (gName.Contains("_")) gName = gName.Split('_')[0];
+        if (gName.Contains("(")) gName = gName.Split('(')[0].Trim();
+
+        ItemData loaded = Resources.Load<ItemData>($"Items/{gName}");
+#if UNITY_EDITOR
+        if (loaded == null)
+        {
+            loaded = UnityEditor.AssetDatabase.LoadAssetAtPath<ItemData>($"Assets/Items/{gName}.asset");
+        }
+#endif
+        return loaded;
     }
 
     private void ResolvePlayer()
@@ -150,6 +181,12 @@ public class WeaponController : MonoBehaviour
 
     private void Update()
     {
+        // Chỉ vũ khí đang được kích hoạt trên tay người chơi mới được nhận Input
+        if (WeaponSwitcher.Instance != null && WeaponSwitcher.Instance.GetActiveWeapon() != this)
+        {
+            return;
+        }
+
         bool gameplayInputBlocked =
             (UIManager.Instance != null && UIManager.Instance.IsGameplayInputBlocked) ||
             Cursor.visible || CursorLockMode.Locked != Cursor.lockState;
@@ -186,18 +223,50 @@ public class WeaponController : MonoBehaviour
         }
     }
 
+    [Header("Ammo Settings (Dự phòng khi chưa gán WeaponData)")]
+    public AmmoType fallbackAmmoType = AmmoType.PistolAmmo;
+
     public void Reload()
     {
         if (isReloading || currentBullets >= BulletsInMag) return;
+
+        int neededAmmo = BulletsInMag - currentBullets;
+        if (neededAmmo <= 0) return;
+
+        ItemData ammoItem = weaponData != null ? weaponData.ammoTypeItem : null;
+        AmmoType aType = (weaponData != null && weaponData.AmmoType != AmmoType.None) ? weaponData.AmmoType : fallbackAmmoType;
+
+        if (ammoItem == null && aType == AmmoType.None)
+        {
+            // Chế độ fallback: Không có cấu hình loại đạn -> Nạp đầy vô hạn
+            if (reloadCoroutine != null)
+            {
+                StopCoroutine(reloadCoroutine);
+            }
+            reloadCoroutine = StartCoroutine(ReloadRoutine(neededAmmo, false));
+            return;
+        }
+
+        // Chế độ thực tế: Kiểm tra đạn trong Inventory
+        int availableAmmoInInventory = GetTotalReservedAmmo();
+
+        if (availableAmmoInInventory <= 0)
+        {
+            string gunName = weaponData != null ? weaponData.weaponName : name;
+            Debug.LogWarning($"<color=red><b>[WeaponController] Hết đạn dự trữ trong kho đồ cho {gunName}! (Cần {neededAmmo} viên)</b></color>");
+            return;
+        }
+
+        int actualAmmoToReload = Mathf.Min(neededAmmo, availableAmmoInInventory);
 
         if (reloadCoroutine != null)
         {
             StopCoroutine(reloadCoroutine);
         }
-        reloadCoroutine = StartCoroutine(ReloadRoutine());
+        reloadCoroutine = StartCoroutine(ReloadRoutine(actualAmmoToReload, true));
     }
 
-    private IEnumerator ReloadRoutine()
+    private IEnumerator ReloadRoutine(int ammoToReload, bool consumeFromInventory)
     {
         isReloading = true;
 
@@ -214,9 +283,53 @@ public class WeaponController : MonoBehaviour
         float duration = Mathf.Max(0.1f, reloadDuration);
         yield return new WaitForSeconds(duration);
 
-        currentBullets = BulletsInMag;
+        if (consumeFromInventory)
+        {
+            InventoryManager inv = InventoryManager.Instance != null ? InventoryManager.Instance : FindFirstObjectByType<InventoryManager>();
+            if (inv != null)
+            {
+                ItemData ammoItem = weaponData != null ? weaponData.ammoTypeItem : null;
+                AmmoType aType = (weaponData != null && weaponData.AmmoType != AmmoType.None) ? weaponData.AmmoType : fallbackAmmoType;
+                inv.RemoveAmmo(ammoItem, aType, ammoToReload);
+            }
+        }
+
+        currentBullets = Mathf.Min(BulletsInMag, currentBullets + ammoToReload);
         isReloading = false;
         reloadCoroutine = null;
+
+        string weaponTitle = weaponData != null ? weaponData.weaponName : name;
+        Debug.Log($"<color=yellow>[WeaponController] Đã nạp {ammoToReload} viên đạn cho {weaponTitle}. Băng đạn: {currentBullets}/{BulletsInMag}. Dự trữ trong túi: {GetTotalReservedAmmo()}</color>");
+    }
+
+    /// <summary>
+    /// Trả về tổng số đạn dự trữ trong Inventory của loại đạn mà súng này sử dụng.
+    /// Trả về -1 nếu súng ở chế độ fallback không giới hạn.
+    /// </summary>
+    public int GetTotalReservedAmmo()
+    {
+        InventoryManager inv = InventoryManager.Instance != null ? InventoryManager.Instance : FindFirstObjectByType<InventoryManager>();
+        if (inv == null) return 0;
+
+        ItemData ammoItem = weaponData != null ? weaponData.ammoTypeItem : null;
+        AmmoType aType = (weaponData != null && weaponData.AmmoType != AmmoType.None) ? weaponData.AmmoType : fallbackAmmoType;
+
+        if (ammoItem == null && aType == AmmoType.None)
+        {
+            return -1; // Vô hạn / Fallback
+        }
+
+        int total = 0;
+        if (ammoItem != null)
+        {
+            total = inv.GetItemCount(ammoItem);
+        }
+        if (total == 0 && aType != AmmoType.None)
+        {
+            total = inv.GetAmmoCount(aType);
+        }
+
+        return total;
     }
 
     public void Shoot()

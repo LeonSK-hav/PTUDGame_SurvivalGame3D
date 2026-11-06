@@ -19,6 +19,8 @@ public class WeaponData : ScriptableObject
     [Header("Magazine & Ammo")]
     [Min(1)] public int magazineSize = 8;
     [Min(0.1f)] public float reloadDuration = 1.2f;
+    [Tooltip("Phân loại đạn sử dụng")]
+    public AmmoType ammoType = AmmoType.PistolAmmo;
     [Tooltip("Vật phẩm đạn tương ứng trong Inventory")]
     public ItemData ammoTypeItem;
 
@@ -30,10 +32,17 @@ public class WeaponData : ScriptableObject
     public ParticleSystem muzzleFlashPrefab;
 
     /// <summary>
-    /// Tiện ích lấy AmmoType từ ammoTypeItem nếu được gán
+    /// Tiện ích lấy AmmoType từ ammoTypeItem nếu được gán, hoặc lấy từ ammoType
     /// </summary>
     public AmmoType AmmoType
     {
-        get { return ammoTypeItem != null ? ammoTypeItem.ammoType : AmmoType.None; }
+        get
+        {
+            if (ammoTypeItem != null && ammoTypeItem.ammoType != AmmoType.None)
+            {
+                return ammoTypeItem.ammoType;
+            }
+            return ammoType;
+        }
     }
 }

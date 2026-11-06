@@ -17,7 +17,7 @@ MonoBehaviour:
   itemType: 0
   Price: 500
   equipmentType: 1
-  requiredLevel: 2
+  requiredLevel: 1
   scope: 8
   ammoType: 1
   worldItemPrefab: {fileID: 2130311712418556323, guid: b63bfe39cb7e0c048b8301ef740f25fd,
