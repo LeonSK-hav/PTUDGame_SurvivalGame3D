@@ -3345,7 +3345,7 @@ MonoBehaviour:
   callHordeRadius: 25
   isEnraged: 0
   target: {fileID: 557154381}
-  playerHealth: {fileID: 1717285907}
+  playerHealth: {fileID: 2010000016}
   Runner: 1
   walkSpeed: 3.2
   runSpeed: 5.8
@@ -3822,7 +3822,7 @@ MonoBehaviour:
   playerTransform: {fileID: 557154381}
   worldItemPrefab: {fileID: 4326444041072580206, guid: 37dabac58f583414e9329996e9b8fcc8,
     type: 3}
-  playerHealth: {fileID: 1717285907}
+  playerHealth: {fileID: 2010000016}
 --- !u!1 &141877799
 GameObject:
   m_ObjectHideFlags: 0
@@ -16476,6 +16476,7 @@ GameObject:
   - component: {fileID: 2010000015}
   - component: {fileID: 2010000016}
   - component: {fileID: 2010000017}
+  - component: {fileID: 877098976}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -19003,7 +19004,7 @@ MonoBehaviour:
   playerTransform: {fileID: 557154381}
   worldItemPrefab: {fileID: 4326444041072580206, guid: 37dabac58f583414e9329996e9b8fcc8,
     type: 3}
-  playerHealth: {fileID: 1717285907}
+  playerHealth: {fileID: 2010000016}
 --- !u!1 &633023066
 GameObject:
   m_ObjectHideFlags: 0
@@ -21971,7 +21972,7 @@ MonoBehaviour:
   callHordeRadius: 12
   isEnraged: 0
   target: {fileID: 557154381}
-  playerHealth: {fileID: 1717285907}
+  playerHealth: {fileID: 2010000016}
   Runner: 1
   walkSpeed: 2.8
   runSpeed: 5.2
@@ -25090,7 +25091,6 @@ GameObject:
   m_Component:
   - component: {fileID: 877098973}
   - component: {fileID: 877098975}
-  - component: {fileID: 877098976}
   m_Layer: 0
   m_Name: Stamina_Bar
   m_TagString: Untagged
@@ -25177,7 +25177,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 877098972}
+  m_GameObject: {fileID: 557154376}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 670f8aba89c785e4ca71753e3019149d, type: 3}
@@ -25904,7 +25904,7 @@ MonoBehaviour:
   callHordeRadius: 0
   isEnraged: 0
   target: {fileID: 557154381}
-  playerHealth: {fileID: 1717285907}
+  playerHealth: {fileID: 2010000016}
   Runner: 1
   walkSpeed: 2
   runSpeed: 3.5
@@ -32249,7 +32249,7 @@ MonoBehaviour:
   callHordeRadius: 0
   isEnraged: 0
   target: {fileID: 557154381}
-  playerHealth: {fileID: 1717285907}
+  playerHealth: {fileID: 2010000016}
   Runner: 0
   walkSpeed: 2
   runSpeed: 3.5
@@ -46808,7 +46808,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1717285905}
   - component: {fileID: 1717285906}
-  - component: {fileID: 1717285907}
   m_Layer: 0
   m_Name: HP_Bar
   m_TagString: Untagged
@@ -46889,21 +46888,6 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &1717285907
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1717285904}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b1ade5308b9ae144e9e4e05f6c56fb22, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  hpSlider: {fileID: 1717285906}
-  hpText: {fileID: 1174623388}
-  maxHP: 100
 --- !u!1 &1725014931
 GameObject:
   m_ObjectHideFlags: 0
@@ -47624,7 +47608,7 @@ MonoBehaviour:
   callHordeRadius: 0
   isEnraged: 0
   target: {fileID: 557154381}
-  playerHealth: {fileID: 1717285907}
+  playerHealth: {fileID: 2010000016}
   Runner: 1
   walkSpeed: 2
   runSpeed: 3.5
@@ -57790,7 +57774,7 @@ MonoBehaviour:
   callHordeRadius: 0
   isEnraged: 0
   target: {fileID: 557154381}
-  playerHealth: {fileID: 1717285907}
+  playerHealth: {fileID: 2010000016}
   Runner: 1
   walkSpeed: 2
   runSpeed: 3.5
