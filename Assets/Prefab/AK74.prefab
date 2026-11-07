@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 314691614647005029}
   - component: {fileID: 935386232055642009}
   - component: {fileID: 959036057741002749}
-  - component: {fileID: 5267400778113756380}
+  - component: {fileID: -8963139973937825226}
   m_Layer: 0
   m_Name: AK74
   m_TagString: Untagged
@@ -161,7 +161,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.18488906, y: 0.81724846, z: 2.6975396}
   m_Center: {x: -0.011279201, y: -0.06957805, z: -0.062597096}
---- !u!114 &5267400778113756380
+--- !u!114 &-8963139973937825226
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
