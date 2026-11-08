@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b2e4f71a8c3d4a22b9e105e917d58301, type: 3}
   m_Name: WeaponData_SSG_Guns_Pack_01
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   weaponName: SSG_Guns_Pack_01
   equipmentType: 1
   weaponIcon: {fileID: 21300000, guid: e420d773f0523f6478f5a1ebdd9ba034, type: 3}
@@ -23,6 +23,6 @@ MonoBehaviour:
   reloadDuration: 1.7
   ammoType: 1
   ammoTypeItem: {fileID: 11400000, guid: aaac314e220ceba429c5b93eb99c7c70, type: 2}
-  shootSound: {fileID: 0}
+  shootSound: {fileID: 8300000, guid: c83c6e84f6617e84489eb5835cee4634, type: 3}
   reloadSound: {fileID: 0}
   muzzleFlashPrefab: {fileID: 0}

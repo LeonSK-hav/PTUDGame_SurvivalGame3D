@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b2e4f71a8c3d4a22b9e105e917d58301, type: 3}
   m_Name: WeaponData_SM_Special_Submachine_Gun_Clean
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   weaponName: SM_Special_Submachine_Gun_Clean
   equipmentType: 1
   weaponIcon: {fileID: 21300000, guid: d21016c0c2e0f374daeeec15901ef69a, type: 3}
@@ -23,6 +23,6 @@ MonoBehaviour:
   reloadDuration: 1.8
   ammoType: 2
   ammoTypeItem: {fileID: 0}
-  shootSound: {fileID: 0}
+  shootSound: {fileID: 8300000, guid: 4b3830d11000279498a64c1265dfe970, type: 3}
   reloadSound: {fileID: 0}
   muzzleFlashPrefab: {fileID: 0}
