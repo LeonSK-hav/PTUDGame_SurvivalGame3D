@@ -145,7 +145,16 @@ public class ShopManager : MonoBehaviour
         for (int i = 0; i < itemsToAddCount; i++)
         {
             ItemData loadedItem = allLoadedItems[i];
-            int randomStock = Random.Range(1, 99);
+            int randomStock=0;
+            if(loadedItem.itemType != ItemType.Consumable)
+            {
+                randomStock = 1; // Nếu không là vật phẩm tiêu hao, số lượng tồn kho sẽ nhiều hơn
+            }
+            else{
+                
+                randomStock = Random.Range(1, 99); // Nếu là vật phẩm tiêu hao, số lượng tồn kho sẽ nhiều hơn
+            }
+
             shopItems.Add(new ShopItem
             {
                 itemData = loadedItem,
@@ -378,31 +387,34 @@ public class ShopManager : MonoBehaviour
         if (PlayerCoins < totalPrice)
         {
             Debug.Log("Không đủ tiền!");
-            return;
-        }
-
-        bool addedSuccess = inventoryManager != null && inventoryManager.AddItem(shopItem.itemData, currentQuantity);
-        if (!addedSuccess)
-        {
-            Debug.Log("Inventory đã đầy!");
-            return;
-        }
-
-        // Trừ trực tiếp tiền vào PlayerStats thông qua thuộc tính chung
-        PlayerCoins -= totalPrice;
-        UpdateCoinUI();
-
-        shopItem.stock -= currentQuantity;
-
-        if (shopItem.stock <= 0)
-        {
-            shopItems.RemoveAt(selectedIndex);
-            ClearDetails();
         }
         else
         {
-            OnSelectShopSlot(selectedIndex);
+                bool addedSuccess = inventoryManager != null && inventoryManager.AddItem(shopItem.itemData, currentQuantity);
+            if (!addedSuccess)
+            {
+                Debug.Log("Inventory đã đầy!");
+                return;
+            }
+
+            // Trừ trực tiếp tiền vào PlayerStats thông qua thuộc tính chung
+            PlayerCoins -= totalPrice;
+            UpdateCoinUI();
+
+            shopItem.stock -= currentQuantity;
+
+            if (shopItem.stock <= 0)
+            {
+                shopItems.RemoveAt(selectedIndex);
+                ClearDetails();
+            }
+            else
+            {
+                OnSelectShopSlot(selectedIndex);
+            }
         }
+
+        
 
         CleanAndSortShopList();
         UpdateShopUI();
