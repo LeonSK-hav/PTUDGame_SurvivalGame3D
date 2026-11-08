@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: AK74
   itemIcon: {fileID: 21300000, guid: f66e792b7d1ed7e4882de3aacd19c85c, type: 3}
-  itemType: 0
+  itemType: 2
   Price: 250
   equipmentType: 1
   requiredLevel: 1

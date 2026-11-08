@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: SM_Chainsaw
   itemIcon: {fileID: 21300000, guid: 20066c9d4a30dab4c9663cdb9e8873a9, type: 3}
-  itemType: 0
+  itemType: 2
   Price: 600
   equipmentType: 1
   requiredLevel: 3

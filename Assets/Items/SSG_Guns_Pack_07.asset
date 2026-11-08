@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: SSG_Guns_Pack_07
   itemIcon: {fileID: 21300000, guid: 3e5d675d807a99242bcc4caf32c86cf1, type: 3}
-  itemType: 0
+  itemType: 2
   Price: 600
   equipmentType: 1
   requiredLevel: 1

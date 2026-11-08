@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: M107
   itemIcon: {fileID: 21300000, guid: 8bc349c331c06a34da2c2d6bbceb8c88, type: 3}
-  itemType: 0
+  itemType: 2
   Price: 500
   equipmentType: 1
   requiredLevel: 2

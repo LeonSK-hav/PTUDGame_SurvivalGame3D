@@ -146,7 +146,7 @@ public class ShopManager : MonoBehaviour
         {
             ItemData loadedItem = allLoadedItems[i];
             int randomStock=0;
-            if(loadedItem.itemType != ItemType.Consumable)
+            if(loadedItem.itemType == ItemType.Equipment) // Nếu là vật phẩm trang bị, số lượng tồn kho sẽ ít hơn
             {
                 randomStock = 1; // Nếu không là vật phẩm tiêu hao, số lượng tồn kho sẽ nhiều hơn
             }
