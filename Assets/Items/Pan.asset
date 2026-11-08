@@ -16,7 +16,7 @@ MonoBehaviour:
   itemIcon: {fileID: 21300000, guid: 6a1ee0b763ec95b43a734fd4aba8b464, type: 3}
   itemType: 0
   Price: 250
-  equipmentType: 0
+  equipmentType: 1
   requiredLevel: 1
   scope: 0
   ammoType: 0

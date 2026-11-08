@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2e4f71a8c3d4a22b9e105e917d58301, type: 3}
+  m_Name: WeaponData_Pan
+  m_EditorClassIdentifier: 
+  weaponName: Pan
+  equipmentType: 1
+  weaponIcon: {fileID: 21300000, guid: 6a1ee0b763ec95b43a734fd4aba8b464, type: 3}
+  requiredLevel: 1
+  damage: 30
+  fireRate: 0.65
+  range: 1.9
+  isMelee: 1
+  attackRadius: 1.1
+  attackRange: 1.9
+  swingCooldown: 0.65
+  hitDelay: 0.18
+  swingSound: {fileID: 0}
+  hitSound: {fileID: 0}
+  hitEffectPrefab: {fileID: 0}
+  magazineSize: 1
+  reloadDuration: 0.1
+  ammoType: 0
+  ammoTypeItem: {fileID: 0}
+  shootSound: {fileID: 0}
+  reloadSound: {fileID: 0}
+  muzzleFlashPrefab: {fileID: 0}

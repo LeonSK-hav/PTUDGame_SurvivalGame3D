@@ -433,6 +433,25 @@ public class WeaponSwitcher : MonoBehaviour
                 if (weaponItem.ammoType == AmmoType.None)
                 {
                     newWc = newWeaponObj.AddComponent<MeleeController>();
+
+                    // Tự động gán Animator và AnimatorController riêng tương ứng
+                    Animator anim = newWeaponObj.GetComponent<Animator>();
+                    if (anim == null)
+                    {
+                        anim = newWeaponObj.AddComponent<Animator>();
+                    }
+                    if (anim.runtimeAnimatorController == null)
+                    {
+                        string cleanName = weaponItem.itemName.Replace("SM_Camping_", "").Replace("SM_", "");
+#if UNITY_EDITOR
+                        RuntimeAnimatorController ctrl = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(
+                            $"Assets/Animations/Weapons/{cleanName}/{cleanName}.controller");
+                        if (ctrl != null)
+                        {
+                            anim.runtimeAnimatorController = ctrl;
+                        }
+#endif
+                    }
                 }
                 else
                 {
