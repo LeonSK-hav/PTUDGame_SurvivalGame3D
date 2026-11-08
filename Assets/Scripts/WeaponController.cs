@@ -5,6 +5,12 @@ using UnityEngine.InputSystem;
 
 public class WeaponController : MonoBehaviour
 {
+    private static readonly int AimStateHash = Animator.StringToHash("Base Layer.Aim");
+    private static readonly int AimShootStateHash = Animator.StringToHash("Base Layer.Aim Shoot");
+    private static readonly int IdleStateHash = Animator.StringToHash("Base Layer.Idle");
+    private static readonly int WalkStateHash = Animator.StringToHash("Base Layer.Walk");
+    private static readonly int RunStateHash = Animator.StringToHash("Base Layer.Run");
+
     [Header("Weapon Configuration")]
     public WeaponData weaponData;
 
@@ -30,6 +36,10 @@ public class WeaponController : MonoBehaviour
     private float nextFireTime = 0f;
     private bool isReloading = false;
     private Coroutine reloadCoroutine;
+    private Coroutine aimShootCoroutine;
+    private bool isAiming;
+    private bool isPlayingAimShoot;
+    private bool aimRequiresRelease;
 
     public int CurrentBullets
     {
@@ -77,7 +87,15 @@ public class WeaponController : MonoBehaviour
             StopCoroutine(reloadCoroutine);
             reloadCoroutine = null;
         }
+        if (aimShootCoroutine != null)
+        {
+            StopCoroutine(aimShootCoroutine);
+            aimShootCoroutine = null;
+        }
+        PlayMovementState();
         isReloading = false;
+        isAiming = false;
+        isPlayingAimShoot = false;
     }
 
     [Header("Source Item")]
@@ -184,6 +202,7 @@ public class WeaponController : MonoBehaviour
         // Chỉ vũ khí đang được kích hoạt trên tay người chơi mới được nhận Input
         if (WeaponSwitcher.Instance != null && WeaponSwitcher.Instance.GetActiveWeapon() != this)
         {
+            SetAiming(false);
             return;
         }
 
@@ -191,21 +210,35 @@ public class WeaponController : MonoBehaviour
             (UIManager.Instance != null && UIManager.Instance.IsGameplayInputBlocked) ||
             Cursor.visible || CursorLockMode.Locked != Cursor.lockState;
 
-        // Xử lý bắn (chặn khi đang chạy hoặc đang nạp đạn)
+        bool aimHeld = false;
+        bool shootHeld = false;
         if (!gameplayInputBlocked && InputManager.Instance != null && InputManager.Instance.playerInput != null)
         {
-            var fireAction = InputManager.Instance.playerInput.Player.Fire;
-            if (fireAction.WasPressedThisFrame() || fireAction.IsPressed())
+            aimHeld = Mouse.current != null && Mouse.current.rightButton.isPressed;
+            shootHeld = InputManager.Instance.playerInput.Player.Fire.IsPressed();
+        }
+
+        if (!aimHeld)
+        {
+            aimRequiresRelease = false;
+        }
+
+        bool isRunning = player != null && player.IsRunning;
+        bool canAim = aimHeld && !aimRequiresRelease && !isRunning && !isReloading;
+        SetAiming(canAim);
+
+        // Chuột phải giữ để ngắm; chuột trái tiếp tục bắn theo nhịp như cơ chế cũ.
+        if (!gameplayInputBlocked && shootHeld && !isRunning && !isReloading &&
+            Time.time >= nextFireTime && currentBullets > 0)
+        {
+            bool forceReleaseAfterShot = isAiming && RequiresAimReleaseAfterShot();
+            Shoot(isAiming);
+            nextFireTime = Time.time + FireRate;
+
+            if (forceReleaseAfterShot)
             {
-                bool isRunning = player != null && player.IsRunning;
-                if (!isRunning && !isReloading)
-                {
-                    if (Time.time >= nextFireTime && currentBullets > 0)
-                    {
-                        Shoot();
-                        nextFireTime = Time.time + FireRate;
-                    }
-                }
+                aimRequiresRelease = true;
+                SetAiming(false);
             }
         }
 
@@ -221,6 +254,80 @@ public class WeaponController : MonoBehaviour
             animator.SetBool("Walk", player.IsWalking);
             animator.SetBool("Run", player.IsRunning);
         }
+    }
+
+    private void SetAiming(bool aiming)
+    {
+        if (isAiming == aiming) return;
+
+        isAiming = aiming;
+        if (animator == null || isPlayingAimShoot) return;
+
+        if (aiming)
+        {
+            PlayAnimatorState(AimStateHash);
+        }
+        else
+        {
+            PlayMovementState();
+        }
+    }
+
+    private bool RequiresAimReleaseAfterShot()
+    {
+        AmmoType ammoType = weaponData != null && weaponData.AmmoType != AmmoType.None
+            ? weaponData.AmmoType
+            : fallbackAmmoType;
+        return ammoType == AmmoType.ShotgunAmmo || ammoType == AmmoType.SniperAmmo;
+    }
+
+    private void PlayMovementState()
+    {
+        if (animator == null) return;
+
+        int stateHash = player != null && player.IsRunning
+            ? RunStateHash
+            : player != null && player.IsWalking
+                ? WalkStateHash
+                : IdleStateHash;
+        PlayAnimatorState(stateHash);
+    }
+
+    private void PlayAnimatorState(int stateHash)
+    {
+        if (animator != null && animator.HasState(0, stateHash))
+        {
+            animator.Play(stateHash, 0, 0f);
+        }
+    }
+
+    private IEnumerator ReturnFromAimShoot()
+    {
+        yield return null;
+
+        if (animator != null && animator.HasState(0, AimShootStateHash))
+        {
+            float animationDuration = animator.GetCurrentAnimatorStateInfo(0).length;
+            if (animationDuration > 0f)
+            {
+                yield return new WaitForSeconds(animationDuration);
+            }
+        }
+
+        isPlayingAimShoot = false;
+        if (animator != null)
+        {
+            if (isAiming)
+            {
+                PlayAnimatorState(AimStateHash);
+            }
+            else
+            {
+                PlayMovementState();
+            }
+        }
+
+        aimShootCoroutine = null;
     }
 
     [Header("Ammo Settings (Dự phòng khi chưa gán WeaponData)")]
@@ -334,6 +441,11 @@ public class WeaponController : MonoBehaviour
 
     public void Shoot()
     {
+        Shoot(false);
+    }
+
+    private void Shoot(bool aimed)
+    {
         if (currentBullets <= 0) return;
 
         currentBullets--;
@@ -345,7 +457,21 @@ public class WeaponController : MonoBehaviour
 
         if (animator != null)
         {
-            animator.SetTrigger("Shoot");
+            if (aimed && animator.HasState(0, AimShootStateHash))
+            {
+                if (aimShootCoroutine != null)
+                {
+                    StopCoroutine(aimShootCoroutine);
+                }
+
+                isPlayingAimShoot = true;
+                animator.Play(AimShootStateHash, 0, 0f);
+                aimShootCoroutine = StartCoroutine(ReturnFromAimShoot());
+            }
+            else
+            {
+                animator.SetTrigger("Shoot");
+            }
         }
 
         if (AudioManager.Instance != null && shootSound != null)
