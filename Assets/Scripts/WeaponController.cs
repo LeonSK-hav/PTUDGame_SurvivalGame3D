@@ -31,8 +31,8 @@ public class WeaponController : MonoBehaviour
     public Transform playerCamera;
     public LayerMask shootingMask = ~0;
 
-    private Animator animator;
-    private PlayerController player;
+    protected Animator animator;
+    protected PlayerController player;
     private float nextFireTime = 0f;
     private bool isReloading = false;
     private Coroutine reloadCoroutine;
@@ -56,7 +56,12 @@ public class WeaponController : MonoBehaviour
         get { return isReloading; }
     }
 
-    private void Awake()
+    public virtual bool IsMeleeWeapon
+    {
+        get { return weaponData != null && weaponData.isMelee; }
+    }
+
+    protected virtual void Awake()
     {
         animator = GetComponent<Animator>();
         if (animator == null)
@@ -68,7 +73,7 @@ public class WeaponController : MonoBehaviour
         ResolveCamera();
     }
 
-    private void Start()
+    protected virtual void Start()
     {
         if (weaponData != null)
         {
@@ -80,7 +85,7 @@ public class WeaponController : MonoBehaviour
         }
     }
 
-    private void OnDisable()
+    protected virtual void OnDisable()
     {
         if (reloadCoroutine != null)
         {
@@ -105,7 +110,7 @@ public class WeaponController : MonoBehaviour
     /// <summary>
     /// Khởi tạo hoặc cập nhật cấu hình súng từ ScriptableObject WeaponData
     /// </summary>
-    public void SetupWeapon(WeaponData data, ItemData item = null)
+    public virtual void SetupWeapon(WeaponData data, ItemData item = null)
     {
         weaponData = data;
         if (item != null)
@@ -164,7 +169,7 @@ public class WeaponController : MonoBehaviour
         return loaded;
     }
 
-    private void ResolvePlayer()
+    protected void ResolvePlayer()
     {
         if (player != null) return;
 
@@ -179,7 +184,7 @@ public class WeaponController : MonoBehaviour
         }
     }
 
-    private void ResolveCamera()
+    protected void ResolveCamera()
     {
         if (playerCamera != null) return;
 
@@ -197,7 +202,7 @@ public class WeaponController : MonoBehaviour
         }
     }
 
-    private void Update()
+    protected virtual void Update()
     {
         // Chỉ vũ khí đang được kích hoạt trên tay người chơi mới được nhận Input
         if (WeaponSwitcher.Instance != null && WeaponSwitcher.Instance.GetActiveWeapon() != this)
@@ -281,7 +286,7 @@ public class WeaponController : MonoBehaviour
         return ammoType == AmmoType.ShotgunAmmo || ammoType == AmmoType.SniperAmmo;
     }
 
-    private void PlayMovementState()
+    protected void PlayMovementState()
     {
         if (animator == null) return;
 
@@ -293,7 +298,7 @@ public class WeaponController : MonoBehaviour
         PlayAnimatorState(stateHash);
     }
 
-    private void PlayAnimatorState(int stateHash)
+    protected void PlayAnimatorState(int stateHash)
     {
         if (animator != null && animator.HasState(0, stateHash))
         {
@@ -333,7 +338,7 @@ public class WeaponController : MonoBehaviour
     [Header("Ammo Settings (Dự phòng khi chưa gán WeaponData)")]
     public AmmoType fallbackAmmoType = AmmoType.PistolAmmo;
 
-    public void Reload()
+    public virtual void Reload()
     {
         if (isReloading || currentBullets >= BulletsInMag) return;
 

@@ -16,6 +16,16 @@ public class WeaponData : ScriptableObject
     [Min(0.01f)] public float fireRate = 0.5f;
     [Min(0f)] public float range = 100f;
 
+    [Header("Melee Settings (chỉ dùng khi isMelee = true)")]
+    public bool isMelee = false;
+    [Min(0.1f)] public float attackRadius = 1.2f;
+    [Min(0.5f)] public float attackRange = 2.0f;
+    [Min(0.05f)] public float swingCooldown = 0.8f;
+    [Min(0f)] public float hitDelay = 0.2f;
+    public AudioClip swingSound;
+    public AudioClip hitSound;
+    public ParticleSystem hitEffectPrefab;
+
     [Header("Magazine & Ammo")]
     [Min(1)] public int magazineSize = 8;
     [Min(0.1f)] public float reloadDuration = 1.2f;
@@ -38,6 +48,10 @@ public class WeaponData : ScriptableObject
     {
         get
         {
+            if (isMelee)
+            {
+                return AmmoType.None;
+            }
             if (ammoTypeItem != null && ammoTypeItem.ammoType != AmmoType.None)
             {
                 return ammoTypeItem.ammoType;

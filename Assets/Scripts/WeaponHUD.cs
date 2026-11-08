@@ -237,6 +237,22 @@ public class WeaponHUD : MonoBehaviour
     {
         if (activeWeapon == null) return;
 
+        // Xử lý riêng cho Vũ khí Cận chiến (không dùng đạn và không cần nạp)
+        if (activeWeapon.IsMeleeWeapon)
+        {
+            if (ammoText != null)
+            {
+                ammoText.text = "MELEE";
+                ammoText.color = normalAmmoColor;
+            }
+            if (statusText != null)
+            {
+                statusText.text = "";
+                statusText.gameObject.SetActive(false);
+            }
+            return;
+        }
+
         int currentInMag = activeWeapon.CurrentBullets;
         int maxInMag = activeWeapon.MaxBulletsInMag;
         int reservedAmmo = activeWeapon.GetTotalReservedAmmo();

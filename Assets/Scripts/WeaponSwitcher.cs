@@ -429,7 +429,15 @@ public class WeaponSwitcher : MonoBehaviour
             newWc = newWeaponObj.GetComponent<WeaponController>();
             if (newWc == null)
             {
-                newWc = newWeaponObj.AddComponent<WeaponController>();
+                // Nếu là vũ khí cận chiến (không dùng đạn), thêm MeleeController thay vì WeaponController
+                if (weaponItem.ammoType == AmmoType.None)
+                {
+                    newWc = newWeaponObj.AddComponent<MeleeController>();
+                }
+                else
+                {
+                    newWc = newWeaponObj.AddComponent<WeaponController>();
+                }
             }
         }
 
