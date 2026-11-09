@@ -4381,7 +4381,7 @@ PrefabInstance:
     - target: {fileID: 6660184903045082040, guid: 970a0e0414fa8be4695cbe8c3d95afd7,
         type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6984556461454542896, guid: 970a0e0414fa8be4695cbe8c3d95afd7,
         type: 3}
@@ -8189,7 +8189,7 @@ PrefabInstance:
     - target: {fileID: 6660184903045082040, guid: 970a0e0414fa8be4695cbe8c3d95afd7,
         type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6984556461454542896, guid: 970a0e0414fa8be4695cbe8c3d95afd7,
         type: 3}
@@ -10063,7 +10063,7 @@ PrefabInstance:
     - target: {fileID: 6660184903045082040, guid: 970a0e0414fa8be4695cbe8c3d95afd7,
         type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6984556461454542896, guid: 970a0e0414fa8be4695cbe8c3d95afd7,
         type: 3}
@@ -21490,7 +21490,14 @@ MonoBehaviour:
   IsWalking: 0
   IsRunning: 0
   stamina: {fileID: 877098976}
+  gravity: -15
+  jumpHeight: 1.2
+  groundedGravity: -2
+  terminalVelocity: -30
+  jumpStaminaCost: 0
   footstepSound: {fileID: 8300000, guid: 806d462e118b7c24d959b6cef04cbf49, type: 3}
+  jumpSound: {fileID: 0}
+  landSound: {fileID: 0}
   walkStepInterval: 0.5
   runStepInterval: 0.3
 --- !u!143 &557154383
@@ -29975,7 +29982,7 @@ PrefabInstance:
     - target: {fileID: 6660184903045082040, guid: 970a0e0414fa8be4695cbe8c3d95afd7,
         type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6984556461454542896, guid: 970a0e0414fa8be4695cbe8c3d95afd7,
         type: 3}
@@ -66101,7 +66108,7 @@ PrefabInstance:
     - target: {fileID: 6660184903045082040, guid: 970a0e0414fa8be4695cbe8c3d95afd7,
         type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6984556461454542896, guid: 970a0e0414fa8be4695cbe8c3d95afd7,
         type: 3}
