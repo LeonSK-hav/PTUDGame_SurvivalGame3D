@@ -28,6 +28,10 @@ public class WeaponSwitcher : MonoBehaviour
 
     public static WeaponSwitcher Instance { get; private set; }
 
+    [Header("Templates Pool")]
+    [Tooltip("Danh sách các mẫu vũ khí trong scene dùng làm khuôn nhân bản")]
+    [SerializeField] private List<WeaponController> templateWeapons = new List<WeaponController>();
+
     public int CurrentWeaponIndex
     {
         get { return selectedWeapon; }
@@ -49,10 +53,7 @@ public class WeaponSwitcher : MonoBehaviour
             Instance = this;
         }
 
-        if (weapons == null || weapons.Count == 0)
-        {
-            RefreshWeaponList();
-        }
+        InitTemplatesAndWeapons();
     }
 
     private void OnDestroy()
@@ -65,7 +66,7 @@ public class WeaponSwitcher : MonoBehaviour
 
     private void Start()
     {
-        RefreshWeaponList();
+        InitTemplatesAndWeapons();
 
         // Tự động kích hoạt vũ khí hợp lệ đầu tiên và ẩn các vũ khí còn lại
         if (weapons.Count > 0)
@@ -87,9 +88,14 @@ public class WeaponSwitcher : MonoBehaviour
     }
 
     /// <summary>
-    /// Tự động quét và nạp tất cả các WeaponController con vào danh sách
+    /// Đồng bộ và phân loại vũ khí đang trang bị vs các khuôn mẫu (Templates)
     /// </summary>
     public void RefreshWeaponList()
+    {
+        InitTemplatesAndWeapons();
+    }
+
+    private void InitTemplatesAndWeapons()
     {
         if (weapons == null)
         {
@@ -100,15 +106,75 @@ public class WeaponSwitcher : MonoBehaviour
             weapons.RemoveAll(w => w == null);
         }
 
+        if (templateWeapons == null)
+        {
+            templateWeapons = new List<WeaponController>();
+        }
+        else
+        {
+            templateWeapons.RemoveAll(w => w == null);
+        }
+
+        // 1. Quét tất cả các con hiện có của WeaponHolder
         for (int i = 0; i < transform.childCount; i++)
         {
             Transform child = transform.GetChild(i);
             WeaponController wc = child.GetComponent<WeaponController>();
-            if (wc != null && !weapons.Contains(wc))
+            if (wc == null) continue;
+
+            // Nếu con này nằm trong danh sách vũ khí đang trang bị (weapons)
+            if (weapons.Contains(wc))
             {
-                weapons.Add(wc);
+                wc.ResolveAnimator();
+                continue;
+            }
+
+            // Nếu không nằm trong weapons, đây là Template dùng để nhân bản
+            if (!templateWeapons.Contains(wc))
+            {
+                templateWeapons.Add(wc);
+            }
+
+            // Ẩn template đi để không hiển thị hay nhận input ngoài ý muốn
+            child.gameObject.SetActive(false);
+        }
+
+        // 2. Nếu danh sách weapons đang hoàn toàn rỗng, nạp vũ khí đầu tiên vào weapons
+        if (weapons.Count == 0 && templateWeapons.Count > 0)
+        {
+            WeaponController first = templateWeapons[0];
+            templateWeapons.RemoveAt(0);
+            weapons.Add(first);
+            first.ResolveAnimator();
+        }
+
+        // 3. Đảm bảo số vũ khí trang bị không vượt quá maxWeaponSlots
+        while (weapons.Count > maxWeaponSlots)
+        {
+            int lastIndex = weapons.Count - 1;
+            WeaponController excessWc = weapons[lastIndex];
+            weapons.RemoveAt(lastIndex);
+            if (excessWc != null)
+            {
+                if (!templateWeapons.Contains(excessWc))
+                {
+                    templateWeapons.Add(excessWc);
+                }
+                excessWc.gameObject.SetActive(false);
             }
         }
+    }
+
+    public bool IsTemplate(WeaponController wc)
+    {
+        if (wc == null) return false;
+        if (templateWeapons.Contains(wc)) return true;
+        string objName = wc.gameObject.name;
+        if (!objName.Contains("(Clone)") && !System.Text.RegularExpressions.Regex.IsMatch(objName, @"_[0-9a-fA-F]{4}$"))
+        {
+            return true;
+        }
+        return false;
     }
 
     private void Update()
@@ -412,13 +478,20 @@ public class WeaponSwitcher : MonoBehaviour
             clonedObj.transform.localRotation = templateWc.transform.localRotation;
             clonedObj.transform.localScale = templateWc.transform.localScale;
             newWc = clonedObj.GetComponent<WeaponController>();
+            if (newWc != null)
+            {
+                newWc.sourceItemData = weaponItem;
+                newWc.ResolveAnimator();
+            }
         }
         else if (weaponItem.worldItemPrefab != null)
         {
             GameObject newWeaponObj = Instantiate(weaponItem.worldItemPrefab, transform);
             newWeaponObj.name = $"{weaponItem.itemName}_{Guid.NewGuid().ToString().Substring(0, 4)}";
-            newWeaponObj.transform.localPosition = Vector3.zero;
-            newWeaponObj.transform.localRotation = Quaternion.identity;
+            // Đặt vị trí cầm tay hợp lý thay vì nằm ngay ống kính (0,0,0)
+            newWeaponObj.transform.localPosition = new Vector3(0.2f, -0.2f, 0.45f);
+            newWeaponObj.transform.localRotation = Quaternion.Euler(0f, -10f, 0f);
+            newWeaponObj.transform.localScale = Vector3.one;
 
             // Xóa physics/colliders của pickup
             Rigidbody rb = newWeaponObj.GetComponent<Rigidbody>();
@@ -429,12 +502,9 @@ public class WeaponSwitcher : MonoBehaviour
             newWc = newWeaponObj.GetComponent<WeaponController>();
             if (newWc == null)
             {
-                // Nếu là vũ khí cận chiến (không dùng đạn), thêm MeleeController thay vì WeaponController
+                // Nếu là vũ khí cận chiến (không dùng đạn), thêm Animator và MeleeController
                 if (weaponItem.ammoType == AmmoType.None)
                 {
-                    newWc = newWeaponObj.AddComponent<MeleeController>();
-
-                    // Tự động gán Animator và AnimatorController riêng tương ứng
                     Animator anim = newWeaponObj.GetComponent<Animator>();
                     if (anim == null)
                     {
@@ -452,11 +522,19 @@ public class WeaponSwitcher : MonoBehaviour
                         }
 #endif
                     }
+
+                    newWc = newWeaponObj.AddComponent<MeleeController>();
                 }
                 else
                 {
                     newWc = newWeaponObj.AddComponent<WeaponController>();
                 }
+            }
+
+            if (newWc != null)
+            {
+                newWc.sourceItemData = weaponItem;
+                newWc.ResolveAnimator();
             }
         }
 
@@ -491,7 +569,16 @@ public class WeaponSwitcher : MonoBehaviour
                     InventoryManager.Instance.AddItem(oldItemData, 1);
                     Debug.Log($"<color=yellow>[WeaponSwitcher] Đã cất vũ khí cũ ở Slot {targetSlotIndex + 1} ({oldItemData.itemName}) về lại túi đồ!</color>");
                 }
-                Destroy(oldWc.gameObject);
+
+                // Không bao giờ hủy template gốc trong scene
+                if (IsTemplate(oldWc))
+                {
+                    oldWc.gameObject.SetActive(false);
+                }
+                else
+                {
+                    Destroy(oldWc.gameObject);
+                }
             }
 
             weapons[targetSlotIndex] = newWc;
@@ -521,7 +608,15 @@ public class WeaponSwitcher : MonoBehaviour
         }
 
         weapons.RemoveAt(slotIndex);
-        Destroy(wc.gameObject);
+
+        if (IsTemplate(wc))
+        {
+            wc.gameObject.SetActive(false);
+        }
+        else
+        {
+            Destroy(wc.gameObject);
+        }
 
         if (weapons.Count > 0)
         {
@@ -543,26 +638,39 @@ public class WeaponSwitcher : MonoBehaviour
 
     private WeaponController FindTemplateWeapon(string itemName)
     {
-        string clean = itemName.Trim().ToLower();
+        if (string.IsNullOrEmpty(itemName)) return null;
+        string cleanInput = CleanWeaponName(itemName);
 
-        for (int i = 0; i < weapons.Count; i++)
+        // 1. Tìm trong templateWeapons trước
+        for (int i = 0; i < templateWeapons.Count; i++)
         {
-            if (weapons[i] == null) continue;
-            string wName = weapons[i].weaponData != null ? weapons[i].weaponData.weaponName : weapons[i].name;
-            if (wName.Trim().ToLower().Contains(clean) || clean.Contains(wName.Trim().ToLower()))
+            WeaponController wc = templateWeapons[i];
+            if (wc == null) continue;
+
+            string templateName = wc.weaponData != null ? wc.weaponData.weaponName : wc.gameObject.name;
+            string cleanTemplate = CleanWeaponName(templateName);
+
+            if (cleanTemplate.Equals(cleanInput, StringComparison.OrdinalIgnoreCase) ||
+                cleanTemplate.Contains(cleanInput, StringComparison.OrdinalIgnoreCase) ||
+                cleanInput.Contains(cleanTemplate, StringComparison.OrdinalIgnoreCase))
             {
-                return weapons[i];
+                return wc;
             }
         }
 
+        // 2. Tìm trong tất cả children của transform
         for (int i = 0; i < transform.childCount; i++)
         {
             Transform child = transform.GetChild(i);
             WeaponController wc = child.GetComponent<WeaponController>();
             if (wc != null)
             {
-                string wName = wc.weaponData != null ? wc.weaponData.weaponName : child.name;
-                if (wName.Trim().ToLower().Contains(clean) || clean.Contains(wName.Trim().ToLower()))
+                string childName = wc.weaponData != null ? wc.weaponData.weaponName : child.name;
+                string cleanChild = CleanWeaponName(childName);
+
+                if (cleanChild.Equals(cleanInput, StringComparison.OrdinalIgnoreCase) ||
+                    cleanChild.Contains(cleanInput, StringComparison.OrdinalIgnoreCase) ||
+                    cleanInput.Contains(cleanChild, StringComparison.OrdinalIgnoreCase))
                 {
                     return wc;
                 }
@@ -572,14 +680,50 @@ public class WeaponSwitcher : MonoBehaviour
         return null;
     }
 
+    private string CleanWeaponName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "";
+        string clean = name;
+        if (clean.Contains("(Clone)")) clean = clean.Replace("(Clone)", "");
+        clean = System.Text.RegularExpressions.Regex.Replace(clean, @"_[0-9a-fA-F]{4}$", "");
+        clean = clean.Replace("SM_Camping_", "").Replace("SM_", "").Replace("SSG_", "").Replace("WeaponData_", "").Trim().ToLower();
+        return clean;
+    }
+
     private WeaponData FindWeaponDataForItem(ItemData item)
     {
         if (item == null) return null;
-        WeaponData wData = Resources.Load<WeaponData>($"Weapons/WeaponData_{item.itemName}");
+        string itemName = item.itemName;
+        WeaponData wData = Resources.Load<WeaponData>($"Weapons/WeaponData_{itemName}");
 #if UNITY_EDITOR
         if (wData == null)
         {
-            wData = UnityEditor.AssetDatabase.LoadAssetAtPath<WeaponData>($"Assets/Items/WeaponData_{item.itemName}.asset");
+            wData = UnityEditor.AssetDatabase.LoadAssetAtPath<WeaponData>($"Assets/Resources/Weapons/WeaponData_{itemName}.asset");
+        }
+        if (wData == null)
+        {
+            wData = UnityEditor.AssetDatabase.LoadAssetAtPath<WeaponData>($"Assets/Items/WeaponData_{itemName}.asset");
+        }
+        if (wData == null)
+        {
+            string clean = CleanWeaponName(itemName);
+            string[] guids = UnityEditor.AssetDatabase.FindAssets("t:WeaponData", new[] { "Assets/Resources/Weapons" });
+            foreach (string guid in guids)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                WeaponData data = UnityEditor.AssetDatabase.LoadAssetAtPath<WeaponData>(path);
+                if (data != null)
+                {
+                    string cleanData = CleanWeaponName(data.weaponName);
+                    if (cleanData.Equals(clean, StringComparison.OrdinalIgnoreCase) ||
+                        cleanData.Contains(clean, StringComparison.OrdinalIgnoreCase) ||
+                        clean.Contains(cleanData, StringComparison.OrdinalIgnoreCase))
+                    {
+                        wData = data;
+                        break;
+                    }
+                }
+            }
         }
 #endif
         return wData;

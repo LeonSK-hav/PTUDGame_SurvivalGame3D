@@ -19,7 +19,7 @@ MonoBehaviour:
   equipmentType: 1
   requiredLevel: 1
   scope: 6
-  ammoType: 1
+  ammoType: 3
   worldItemPrefab: {fileID: 8866954407875113486, guid: aabb59abb7d5900489da2b87cbc96157,
     type: 3}
   healAmount: 0

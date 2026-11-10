@@ -572,24 +572,25 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
             return;
         }
 
+        // Tạm thời trừ vật phẩm khỏi ô túi đồ TRƯỚC để tạo ô trống nhận vũ khí hoán đổi nếu túi đồ đang đầy 35/35
+        InventorySlot targetSlot = (slotIndex >= 0 && slotIndex < slots.Count) ? slots[slotIndex] : null;
+        ItemData cachedItem = null;
+        int cachedCount = 0;
+        if (targetSlot != null && (targetSlot.itemData == weaponItem || (targetSlot.itemData != null && targetSlot.itemData.itemName == weaponItem.itemName)))
+        {
+            cachedItem = targetSlot.itemData;
+            cachedCount = targetSlot.count;
+            targetSlot.count--;
+            if (targetSlot.count <= 0)
+            {
+                targetSlot.itemData = null;
+                targetSlot.count = 0;
+            }
+        }
+
         bool success = switcher.EquipWeaponFromInventory(weaponItem);
         if (success)
         {
-            // Trừ 1 số lượng súng khỏi ô túi đồ vì đã lấy ra trang bị lên tay người chơi
-            if (slotIndex >= 0 && slotIndex < slots.Count)
-            {
-                var targetSlot = slots[slotIndex];
-                if (targetSlot != null && (targetSlot.itemData == weaponItem || (targetSlot.itemData != null && targetSlot.itemData.itemName == weaponItem.itemName)))
-                {
-                    targetSlot.count--;
-                    if (targetSlot.count <= 0)
-                    {
-                        targetSlot.itemData = null;
-                        targetSlot.count = 0;
-                    }
-                }
-            }
-
             Debug.Log($"<color=green><b>[Inventory] Đã chuyển {weaponItem.itemName} từ túi đồ lên trang bị trên tay Player!</b></color>");
 
             // Đóng bảng Inventory để người chơi thấy ngay súng ngoài thế giới
@@ -601,6 +602,12 @@ public class InventoryManager : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         }
         else
         {
+            // Nếu trang bị thất bại, hoàn tác lại ô túi đồ như cũ để không làm mất đồ của người chơi
+            if (targetSlot != null && cachedItem != null)
+            {
+                targetSlot.itemData = cachedItem;
+                targetSlot.count = cachedCount;
+            }
             Debug.LogWarning($"[Inventory] Không thể kích hoạt vũ khí {weaponItem.itemName} trong WeaponHolder!");
         }
 

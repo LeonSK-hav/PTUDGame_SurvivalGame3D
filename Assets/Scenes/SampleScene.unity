@@ -45794,6 +45794,7 @@ MonoBehaviour:
   selectedWeapon: 0
   switchSound: {fileID: 0}
   scrollThreshold: 0.1
+  templateWeapons: []
 --- !u!1 &1402634507
 GameObject:
   m_ObjectHideFlags: 0

@@ -21,8 +21,8 @@ MonoBehaviour:
   range: 250
   magazineSize: 10
   reloadDuration: 3.2
-  ammoType: 1
-  ammoTypeItem: {fileID: 11400000, guid: aaac314e220ceba429c5b93eb99c7c70, type: 2}
+  ammoType: 4
+  ammoTypeItem: {fileID: 0}
   shootSound: {fileID: 0}
   reloadSound: {fileID: 0}
   muzzleFlashPrefab: {fileID: 0}

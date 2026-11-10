@@ -50,6 +50,8 @@ public class MeleeController : WeaponController
     private Coroutine attackCoroutine;
     private PlayerStats playerStats;
     private AudioSource audioSource;
+    private Quaternion originalLocalRotation;
+    private bool hasCachedRotation = false;
 
     /// <summary>
     /// Đánh dấu đây là vũ khí cận chiến để WeaponHUD và WeaponSwitcher nhận diện
@@ -62,6 +64,12 @@ public class MeleeController : WeaponController
     {
         base.Awake();
 
+        if (!hasCachedRotation)
+        {
+            originalLocalRotation = transform.localRotation;
+            hasCachedRotation = true;
+        }
+
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
         {
@@ -69,6 +77,7 @@ public class MeleeController : WeaponController
         }
 
         ResolvePlayerStats();
+        ResolveAnimator();
 
         // Vũ khí cận chiến không dùng đạn
         currentBullets = 0;
@@ -77,6 +86,7 @@ public class MeleeController : WeaponController
 
     protected override void Start()
     {
+        ResolveAnimator();
         if (weaponData != null)
         {
             SetupWeapon(weaponData, sourceItemData);
@@ -88,6 +98,16 @@ public class MeleeController : WeaponController
         }
     }
 
+    protected override void OnEnable()
+    {
+        base.OnEnable();
+        ResolveAnimator();
+        if (hasCachedRotation)
+        {
+            transform.localRotation = originalLocalRotation;
+        }
+    }
+
     protected override void OnDisable()
     {
         base.OnDisable();
@@ -96,6 +116,11 @@ public class MeleeController : WeaponController
         {
             StopCoroutine(attackCoroutine);
             attackCoroutine = null;
+        }
+
+        if (hasCachedRotation)
+        {
+            transform.localRotation = originalLocalRotation;
         }
 
         isAttacking = false;
@@ -191,17 +216,26 @@ public class MeleeController : WeaponController
         isAttacking = true;
         nextAttackTime = Time.time + swingCooldown;
 
+        ResolveAnimator();
+
         // Phát animation tấn công trên Animator riêng của vũ khí này
         if (animator != null)
         {
             animator.ResetTrigger("Attack");
             animator.SetTrigger("Attack");
+
+            // Kích hoạt phát trực tiếp state Attack để animation không bao giờ bị đơ/kẹt ở Idle
+            int attackStateHash = Animator.StringToHash("Attack");
+            if (animator.HasState(0, attackStateHash))
+            {
+                animator.Play(attackStateHash, 0, 0f);
+            }
         }
 
         // Phát âm thanh vung gió
         PlaySound(swingSound);
 
-        // Nếu không dùng Animation Event trên clip, chạy coroutine tính trễ va chạm
+        // Chạy coroutine xử lý trễ va chạm kèm hiệu ứng vung chém vật lý bổ trợ
         if (!useAnimationEvent)
         {
             if (attackCoroutine != null)
@@ -214,17 +248,39 @@ public class MeleeController : WeaponController
 
     private IEnumerator AttackRoutine()
     {
-        if (hitDelay > 0f)
+        Quaternion startRot = transform.localRotation;
+        Quaternion swingRot = startRot * Quaternion.Euler(20f, -30f, 15f);
+
+        float forwardDuration = Mathf.Max(0.08f, hitDelay);
+        float elapsed = 0f;
+
+        // Vung vũ khí về phía trước
+        while (elapsed < forwardDuration)
         {
-            yield return new WaitForSeconds(hitDelay);
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / forwardDuration);
+            // Easing mượt
+            t = Mathf.SmoothStep(0f, 1f, t);
+            transform.localRotation = Quaternion.Slerp(startRot, swingRot, t);
+            yield return null;
         }
 
+        // Quét sát thương trúng đích
         ExecuteHitCheck();
 
-        // Chờ thời gian hoàn tất đòn đánh
-        float remainingTime = Mathf.Max(0.05f, swingCooldown - hitDelay);
-        yield return new WaitForSeconds(remainingTime);
+        // Thu vũ khí về vị trí Idle ban đầu
+        float returnDuration = Mathf.Max(0.1f, swingCooldown - forwardDuration);
+        elapsed = 0f;
+        while (elapsed < returnDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / returnDuration);
+            t = Mathf.SmoothStep(0f, 1f, t);
+            transform.localRotation = Quaternion.Slerp(swingRot, startRot, t);
+            yield return null;
+        }
 
+        transform.localRotation = startRot;
         isAttacking = false;
         attackCoroutine = null;
     }

@@ -21,7 +21,7 @@ MonoBehaviour:
   range: 150
   magazineSize: 100
   reloadDuration: 4.2
-  ammoType: 1
+  ammoType: 2
   ammoTypeItem: {fileID: 11400000, guid: aaac314e220ceba429c5b93eb99c7c70, type: 2}
   shootSound: {fileID: 8300000, guid: 4b3830d11000279498a64c1265dfe970, type: 3}
   reloadSound: {fileID: 0}

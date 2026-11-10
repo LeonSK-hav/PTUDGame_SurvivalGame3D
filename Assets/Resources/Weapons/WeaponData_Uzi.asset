@@ -22,7 +22,7 @@ MonoBehaviour:
   magazineSize: 32
   reloadDuration: 1.7
   ammoType: 1
-  ammoTypeItem: {fileID: 11400000, guid: aaac314e220ceba429c5b93eb99c7c70, type: 2}
+  ammoTypeItem: {fileID: 11400000, guid: f0d069fdc5453514195d4b422521047c, type: 2}
   shootSound: {fileID: 8300000, guid: 4b3830d11000279498a64c1265dfe970, type: 3}
   reloadSound: {fileID: 0}
   muzzleFlashPrefab: {fileID: 0}

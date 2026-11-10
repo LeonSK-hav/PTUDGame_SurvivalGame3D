@@ -63,14 +63,21 @@ public class WeaponController : MonoBehaviour
 
     protected virtual void Awake()
     {
-        animator = GetComponent<Animator>();
-        if (animator == null)
-        {
-            animator = GetComponentInChildren<Animator>();
-        }
-
+        ResolveAnimator();
         ResolvePlayer();
         ResolveCamera();
+    }
+
+    public void ResolveAnimator()
+    {
+        if (animator == null)
+        {
+            animator = GetComponent<Animator>();
+            if (animator == null)
+            {
+                animator = GetComponentInChildren<Animator>();
+            }
+        }
     }
 
     protected virtual void Start()
@@ -83,6 +90,11 @@ public class WeaponController : MonoBehaviour
         {
             currentBullets = BulletsInMag;
         }
+    }
+
+    protected virtual void OnEnable()
+    {
+        ResolveAnimator();
     }
 
     protected virtual void OnDisable()
@@ -154,18 +166,89 @@ public class WeaponController : MonoBehaviour
     {
         if (sourceItemData != null) return sourceItemData;
 
-        string gName = weaponData != null ? weaponData.weaponName : name;
-        // Loại bỏ hậu tố (Clone) hoặc GUID nếu có
-        if (gName.Contains("_")) gName = gName.Split('_')[0];
-        if (gName.Contains("(")) gName = gName.Split('(')[0].Trim();
+        string targetName = weaponData != null && !string.IsNullOrEmpty(weaponData.weaponName)
+            ? weaponData.weaponName
+            : gameObject.name;
 
-        ItemData loaded = Resources.Load<ItemData>($"Items/{gName}");
+        // Xóa hậu tố (Clone)
+        if (targetName.Contains("(Clone)"))
+        {
+            targetName = targetName.Replace("(Clone)", "").Trim();
+        }
+
+        // Xóa hậu tố GUID ngẫu nhiên dạng _xxxx (5 ký tự cuối: _ kèm 4 ký tự hex)
+        if (System.Text.RegularExpressions.Regex.IsMatch(targetName, @"_[0-9a-fA-F]{4}$"))
+        {
+            targetName = targetName.Substring(0, targetName.Length - 5);
+        }
+
+        // Xóa hậu tố _Equipped nếu có
+        if (targetName.EndsWith("_Equipped", System.StringComparison.OrdinalIgnoreCase))
+        {
+            targetName = targetName.Substring(0, targetName.Length - "_Equipped".Length);
+        }
+
+        // Xóa phần mở ngoặc đơn (nếu có dạng SM_Camping_Knife (1))
+        if (targetName.Contains("("))
+        {
+            targetName = targetName.Split('(')[0].Trim();
+        }
+
+        targetName = targetName.Trim();
+
+        ItemData loaded = Resources.Load<ItemData>($"Items/{targetName}");
 #if UNITY_EDITOR
         if (loaded == null)
         {
-            loaded = UnityEditor.AssetDatabase.LoadAssetAtPath<ItemData>($"Assets/Items/{gName}.asset");
+            loaded = UnityEditor.AssetDatabase.LoadAssetAtPath<ItemData>($"Assets/Items/{targetName}.asset");
+        }
+
+        // Nếu chưa tìm thấy, quét toàn bộ ItemData trong Assets/Items để tìm item khớp tên
+        if (loaded == null)
+        {
+            string[] guids = UnityEditor.AssetDatabase.FindAssets("t:ItemData", new[] { "Assets/Items" });
+            foreach (string guid in guids)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                ItemData item = UnityEditor.AssetDatabase.LoadAssetAtPath<ItemData>(path);
+                if (item != null)
+                {
+                    if (string.Equals(item.itemName, targetName, System.StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(item.name, targetName, System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        loaded = item;
+                        break;
+                    }
+                }
+            }
+
+            // Fallback quét mềm hơn nếu có tiền tố / hậu tố
+            if (loaded == null)
+            {
+                foreach (string guid in guids)
+                {
+                    string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                    ItemData item = UnityEditor.AssetDatabase.LoadAssetAtPath<ItemData>(path);
+                    if (item != null)
+                    {
+                        string cleanItem = item.itemName.Replace("SM_", "").Replace("SSG_", "").Trim();
+                        string cleanTarget = targetName.Replace("SM_", "").Replace("SSG_", "").Trim();
+                        if (cleanItem.Equals(cleanTarget, System.StringComparison.OrdinalIgnoreCase) ||
+                            cleanTarget.Contains(cleanItem, System.StringComparison.OrdinalIgnoreCase) ||
+                            cleanItem.Contains(cleanTarget, System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            loaded = item;
+                            break;
+                        }
+                    }
+                }
+            }
         }
 #endif
+        if (loaded != null)
+        {
+            sourceItemData = loaded;
+        }
         return loaded;
     }
 
@@ -491,20 +574,50 @@ public class WeaponController : MonoBehaviour
             return;
         }
 
-        RaycastHit hit;
-        if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, BulletRange, shootingMask))
+        ResolvePlayer();
+        Transform playerRoot = player != null ? player.transform : (transform.parent != null ? transform.root : null);
+
+        // Loại trừ Layer Player và Layer Weapons khỏi raycast để tia đạn không bao giờ bị cản bởi chính người chơi
+        int mask = shootingMask;
+        int playerLayer = LayerMask.NameToLayer("Player");
+        if (playerLayer >= 0) mask &= ~(1 << playerLayer);
+        int weaponLayer = LayerMask.NameToLayer("Weapons");
+        if (weaponLayer >= 0) mask &= ~(1 << weaponLayer);
+
+        // Dùng RaycastAll để quét xuyên qua các collider nội bộ của Player (CharacterController, vũ khí, phụ kiện...)
+        RaycastHit[] hits = Physics.RaycastAll(playerCamera.position, playerCamera.forward, BulletRange, mask, QueryTriggerInteraction.Ignore);
+        if (hits != null && hits.Length > 0)
         {
-            Target t = hit.collider.GetComponent<Target>() ?? hit.collider.GetComponentInParent<Target>();
-            ZombieAI z = hit.collider.GetComponent<ZombieAI>() ?? hit.collider.GetComponentInParent<ZombieAI>();
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
-            if (t != null)
+            for (int i = 0; i < hits.Length; i++)
             {
-                t.OnHit();
-            }
+                RaycastHit hit = hits[i];
+                if (hit.collider == null) continue;
 
-            if (z != null)
-            {
-                z.TakeDamage(BulletsDamage);
+                // Bỏ qua tuyệt đối nếu trúng chính Player hoặc các thành phần con của Player
+                if (playerRoot != null && (hit.collider.transform == playerRoot || hit.collider.transform.IsChildOf(playerRoot)))
+                {
+                    continue;
+                }
+
+                Target t = hit.collider.GetComponent<Target>() ?? hit.collider.GetComponentInParent<Target>();
+                ZombieAI z = hit.collider.GetComponent<ZombieAI>() ?? hit.collider.GetComponentInParent<ZombieAI>();
+
+                if (t != null)
+                {
+                    t.OnHit();
+                    break;
+                }
+
+                if (z != null)
+                {
+                    z.TakeDamage(BulletsDamage);
+                    break;
+                }
+
+                // Nếu chạm vật cản cứng của môi trường (tường, địa hình, chướng ngại vật) -> viên đạn dừng lại
+                break;
             }
         }
     }
