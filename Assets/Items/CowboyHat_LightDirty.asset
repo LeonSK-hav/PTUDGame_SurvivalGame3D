@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb981fb946f80d144856cc34461552e7, type: 3}
+  m_Name: CowboyHat_LightDirty
+  m_EditorClassIdentifier: 
+  itemName: CowboyHat_LightDirty
+  itemIcon: {fileID: 21300000, guid: 4a17e3bb2088a974096d1b2323c621b4, type: 3}
+  itemType: 2
+  Price: 200
+  equipmentType: 2
+  requiredLevel: 2
+  scope: 0
+  ammoType: 0
+  worldItemPrefab: {fileID: 103518734291123595, guid: 466d5982732e0ae4eaa55f18ac70baac,
+    type: 3}
+  healAmount: 0
+  damageBonus: 0
+  defenseBonus: 35
+  agilityBonus: 0
+  maxStack: 1

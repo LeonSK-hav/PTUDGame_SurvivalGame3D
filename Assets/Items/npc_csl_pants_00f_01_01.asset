@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb981fb946f80d144856cc34461552e7, type: 3}
+  m_Name: npc_csl_pants_00f_01_01
+  m_EditorClassIdentifier: 
+  itemName: npc_csl_pants_00f_01_01
+  itemIcon: {fileID: 21300000, guid: 93ad2698492ce404887439bad11aa66b, type: 3}
+  itemType: 2
+  Price: 100
+  equipmentType: 4
+  requiredLevel: 1
+  scope: 0
+  ammoType: 0
+  worldItemPrefab: {fileID: 903213710257685494, guid: c6d0226d3751a0c44b125e1d30b10cdc,
+    type: 3}
+  healAmount: 0
+  damageBonus: 0
+  defenseBonus: 20
+  agilityBonus: 0
+  maxStack: 1

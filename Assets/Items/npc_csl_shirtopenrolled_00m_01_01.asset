@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb981fb946f80d144856cc34461552e7, type: 3}
+  m_Name: npc_csl_shirtopenrolled_00m_01_01
+  m_EditorClassIdentifier: 
+  itemName: npc_csl_shirtopenrolled_00m_01_01
+  itemIcon: {fileID: 21300000, guid: 4c8e7043cd6f44d498f18196ccdda43e, type: 3}
+  itemType: 2
+  Price: 100
+  equipmentType: 3
+  requiredLevel: 1
+  scope: 0
+  ammoType: 0
+  worldItemPrefab: {fileID: 993505032955702317, guid: f27d52d80ac0a914ca5a2df96e120809,
+    type: 3}
+  healAmount: 0
+  damageBonus: 0
+  defenseBonus: 10
+  agilityBonus: 0
+  maxStack: 1
