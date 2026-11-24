@@ -16,7 +16,8 @@ public class PrefabToIconGenerator : MonoBehaviour
        //string prefabFolderPath = "Assets/ForPlayer/SSG_Guns_Pack_01_Demo/Prefabs"; // Thư mục chứa prefab của bạn
         //string prefabFolderPath = "Assets\\Scooter helmet\\Prefab"; // Thư mục chứa prefab của bạn
         //string prefabFolderPath = "Assets\\SubstanceAssets\\AssortedHeadwearPack\\ApocalypseHeadwearPack\\CowboyHat\\Prefabs"; // Thư mục chứa prefab của bạn
-        string prefabFolderPath = "Assets\\SubstanceAssets\\AssortedHeadwearPack\\MedievalHatsPack\\FarmerHat\\Prefabs"; // Thư mục chứa prefab của bạn
+        //string prefabFolderPath = "Assets/12g-ammo/source"; // Thư mục chứa prefab của bạn
+        string prefabFolderPath = "Assets/9x39mm-spp-cartridge-high-poly/source/model/model"; // Thư mục chứa prefab của bạn
 
         string outputFolder = "Assets/GeneratedIcons";
         string worldItemPrefabFolder = "Assets/Prefab"; // Thư mục lưu prefab dùng ngoài thế giới sau khi đã được gắn vật lý
