@@ -601,18 +601,19 @@ public class WeaponController : MonoBehaviour
                     continue;
                 }
 
-                Target t = hit.collider.GetComponent<Target>() ?? hit.collider.GetComponentInParent<Target>();
                 ZombieAI z = hit.collider.GetComponent<ZombieAI>() ?? hit.collider.GetComponentInParent<ZombieAI>();
-
-                if (t != null)
-                {
-                    t.OnHit();
-                    break;
-                }
+                Target t = hit.collider.GetComponent<Target>() ?? hit.collider.GetComponentInParent<Target>();
 
                 if (z != null)
                 {
                     z.TakeDamage(BulletsDamage);
+                    if (t != null) t.OnHit();
+                    break;
+                }
+
+                if (t != null)
+                {
+                    t.OnHit();
                     break;
                 }
 

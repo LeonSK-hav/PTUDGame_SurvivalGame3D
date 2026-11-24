@@ -45,6 +45,12 @@ public class ZombieAI : MonoBehaviour
     public Vector3 headOffset = new Vector3(0, 2.2f, 0); // Khoảng cách từ gốc zombie lên đầu
     private bool isHealthBarVisible = false;
 
+    [Header("UI Display Durations (Giới hạn thời gian hiển thị)")]
+    public float healthBarDisplayDuration = 3.5f; // Thời gian hiển thị thanh máu sau mỗi lần bị bắn (giây)
+    public float nameDisplayDuration = 2.0f;      // Thời gian hiển thị tên loại zombie sau khi bắn (giây)
+    private float healthBarHideTimer = 0f;
+    private float nameHideTimer = 0f;
+
     [Header("Combat")]
     public int damageAmount = 10;
     public float attackDistance = 2f;
@@ -167,6 +173,13 @@ public class ZombieAI : MonoBehaviour
         {
             instantiatedHealthUI = Instantiate(healthUIPrefab, mainCanvas.transform, false);
 
+            // Xóa triệt để component PlayerHealth nếu có dính vào prefab để tránh bị đè lại 100/100 khi kích hoạt lần đầu
+            PlayerHealth[] phComponents = instantiatedHealthUI.GetComponentsInChildren<PlayerHealth>(true);
+            foreach (var ph in phComponents)
+            {
+                if (ph != null) Destroy(ph);
+            }
+
             // Hủy bỏ CanvasScaler và GraphicRaycaster để không xung đột scale và không cản tia bắn đạn
             var childRaycaster = instantiatedHealthUI.GetComponent<GraphicRaycaster>();
             if (childRaycaster != null) Destroy(childRaycaster);
@@ -189,12 +202,22 @@ public class ZombieAI : MonoBehaviour
                 rt.anchorMin = new Vector2(0.5f, 0.5f);
                 rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.pivot = new Vector2(0.5f, 0.5f);
-                // Đối với Boss, thanh máu sẽ to hơn 35% để thể hiện sự áp đảo
-                rt.localScale = (zombieType == ZombieType.Boss) ? new Vector3(1.35f, 1.35f, 1f) : Vector3.one;
+                // Giữ tỉ lệ chuẩn gọn gàng (Vector3.one) để không bị dính tràn vào panel khác
+                rt.localScale = Vector3.one;
             }
 
-            healthSlider = instantiatedHealthUI.GetComponentInChildren<Slider>();
-            healthText = instantiatedHealthUI.GetComponentInChildren<TextMeshProUGUI>();
+            healthSlider = instantiatedHealthUI.GetComponentInChildren<Slider>(true);
+            healthText = instantiatedHealthUI.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (healthText != null)
+            {
+                healthText.fontSize = 14f;
+                healthText.alignment = TextAlignmentOptions.Center;
+                RectTransform textRt = healthText.GetComponent<RectTransform>();
+                if (textRt != null)
+                {
+                    textRt.anchoredPosition = Vector2.zero;
+                }
+            }
 
             // Mặc định ban đầu ẩn thanh máu
             instantiatedHealthUI.SetActive(false);
@@ -389,7 +412,33 @@ public class ZombieAI : MonoBehaviour
     {
         if (instantiatedHealthUI == null) return;
 
-        // Chỉ hiển thị và cập nhật vị trí thanh máu nếu zombie đã từng bị bắn trúng (isHealthBarVisible == true)
+        // Xử lý đếm ngược giới hạn thời gian hiển thị thanh máu và tên loại zombie
+        if (isHealthBarVisible && !dead)
+        {
+            // Đếm ngược thời gian hiển thị tên loại zombie
+            if (nameHideTimer > 0f)
+            {
+                nameHideTimer -= Time.deltaTime;
+                if (nameHideTimer <= 0f)
+                {
+                    UpdateHealthUI(); // Hết thời gian tên -> tự thu gọn chỉ còn số máu
+                }
+            }
+
+            // Đếm ngược thời gian hiển thị toàn bộ thanh máu
+            healthBarHideTimer -= Time.deltaTime;
+            if (healthBarHideTimer <= 0f)
+            {
+                isHealthBarVisible = false;
+                if (instantiatedHealthUI.activeSelf)
+                {
+                    instantiatedHealthUI.SetActive(false);
+                }
+                return;
+            }
+        }
+
+        // Chỉ hiển thị và cập nhật vị trí thanh máu nếu zombie đang trong thời gian hiển thị
         if (!isHealthBarVisible || dead)
         {
             if (instantiatedHealthUI.activeSelf) instantiatedHealthUI.SetActive(false);
@@ -665,7 +714,10 @@ public class ZombieAI : MonoBehaviour
 
         // MỖI KHI BỊ GIẢM MÁU THÌ KÍCH HOẠT HIỂN THỊ THANH MÁU TRÊN ĐẦU
         isHealthBarVisible = true;
-        if (instantiatedHealthUI != null)
+        healthBarHideTimer = healthBarDisplayDuration;
+        nameHideTimer = nameDisplayDuration;
+
+        if (instantiatedHealthUI != null && !instantiatedHealthUI.activeSelf)
         {
             instantiatedHealthUI.SetActive(true);
         }
@@ -746,7 +798,16 @@ public class ZombieAI : MonoBehaviour
                 (zombieType == ZombieType.Boss ? "★ BOSS ZOMBIE ★" :
                  zombieType == ZombieType.Medium ? "[Trung Cấp] Zombie Nhanh" : "Zombie Thường");
 
-            healthText.text = $"{displayName}\n{currentHealth}/{maxHealth}";
+            // Nếu còn trong thời gian hiển thị tên loại zombie: hiển thị tên nhỏ gọn phía trên (thu nhỏ size còn 60%)
+            // Sau khi hết thời gian tên: chỉ hiển thị số máu để không dính hay che khuất panel khác
+            if (nameHideTimer > 0f)
+            {
+                healthText.text = $"<size=60%><color=#FFE082>{displayName}</color></size>\n<b>{currentHealth}/{maxHealth}</b>";
+            }
+            else
+            {
+                healthText.text = $"<b>{currentHealth}/{maxHealth}</b>";
+            }
         }
     }
 
