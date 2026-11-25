@@ -85,6 +85,27 @@ public class ZombieAI : MonoBehaviour
     public Color hitColor = Color.red;    // Hiệu ứng màu đỏ biểu thị zombie bị trừ máu (theo commit cũ)
     public float flashDuration = 0.2f;
 
+    [Header("Zombie Skin & Visual Diversity (Hệ thống Skin & Đa dạng hóa ngoại hình)")]
+    [Tooltip("Bật tính năng đa dạng hóa diện mạo và skin cho zombie")]
+    public bool enableSkinDiversity = true;
+    [Tooltip("Tự động áp dụng diện mạo đặc trưng nhận diện theo Cấp độ (Normal, Medium, Boss)")]
+    public bool autoTierVisuals = true;
+    [Tooltip("Gán trực tiếp Material riêng trong Inspector nếu muốn dùng skin tùy biến")]
+    public Material customSkinMaterial;
+    [Tooltip("Màu phủ tùy chỉnh (Tint) nếu muốn chỉnh màu thủ công")]
+    public Color customSkinColor = Color.white;
+    [Tooltip("Màu phát quang tùy chỉnh (Emission)")]
+    public Color customEmissionColor = Color.black;
+    [Tooltip("Danh sách các sắc thái màu ngẫu nhiên cho Zombie Thường để tăng tính phong phú")]
+    public Color[] normalSkinColorVariations = new Color[]
+    {
+        new Color(0.92f, 0.95f, 0.90f), // Xám xanh thối rữa kinh điển (Decayed)
+        new Color(0.80f, 0.85f, 0.95f), // Tử thi tái nhợt tro tàn (Pale Ash)
+        new Color(0.92f, 0.82f, 0.72f), // Bùn đất sình lầy vàng ố (Rotten Mud)
+        new Color(0.95f, 0.80f, 0.80f), // Dân thường vấy máu (Bloodstained Civilian)
+        new Color(0.72f, 0.75f, 0.72f)  // Kẻ lang thang u tối (Dark Wanderer)
+    };
+
     [Header("Item Drop System (Cơ chế rơi đồ khi chết)")]
     public bool enableItemDrop = true;
     public ItemData[] availableDropPool;       // Danh sách vật phẩm có thể rơi (tự động nạp nếu để trống)
@@ -157,6 +178,9 @@ public class ZombieAI : MonoBehaviour
         }
 
         mainCamera = Camera.main;
+
+        // Áp dụng Skin và diện mạo đặc trưng (Normal, Medium, Boss) trước khi khởi tạo Hit Flash
+        ApplyZombieSkin();
 
         // Lưu trữ Renderers và Material để đổi màu đỏ khi nhận sát thương
         InitializeHitFlashMaterials();
@@ -329,6 +353,13 @@ public class ZombieAI : MonoBehaviour
         {
             agent.speed = Runner ? runSpeed : walkSpeed;
         }
+
+        // Tự động làm mới ngoại hình và skin nhận diện
+        ApplyZombieSkin();
+        if (materialColorDataList.Count > 0)
+        {
+            InitializeHitFlashMaterials();
+        }
     }
 
     [ContextMenu("Apply Tier Preset")]
@@ -385,6 +416,100 @@ public class ZombieAI : MonoBehaviour
                 agent.speed = Runner ? runSpeed : walkSpeed;
                 agent.SetDestination(target.position);
                 anim.SetBool("Run", Runner);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Áp dụng skin và diện mạo nhận diện đặc trưng cho Zombie
+    /// </summary>
+    public void ApplyZombieSkin()
+    {
+        if (!enableSkinDiversity) return;
+
+        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        if (renderers == null || renderers.Length == 0) return;
+
+        Color chosenBaseColor = Color.white;
+        Color chosenEmission = Color.black;
+        bool hasCustomEmission = false;
+
+        if (customSkinMaterial != null)
+        {
+            // Nếu người dùng gán trực tiếp Material riêng trong Inspector
+            foreach (var rend in renderers)
+            {
+                if (rend is ParticleSystemRenderer) continue;
+                Material[] mats = new Material[rend.sharedMaterials.Length];
+                for (int i = 0; i < mats.Length; i++) mats[i] = customSkinMaterial;
+                rend.materials = mats;
+            }
+            return;
+        }
+
+        if (autoTierVisuals)
+        {
+            switch (zombieType)
+            {
+                case ZombieType.Normal:
+                    if (normalSkinColorVariations != null && normalSkinColorVariations.Length > 0)
+                    {
+                        // Chọn biến thể màu dựa trên instance ID để cố định cho từng con zombie mà không bị ngẫu nhiên đổi màu
+                        int index = Mathf.Abs(gameObject.GetInstanceID()) % normalSkinColorVariations.Length;
+                        chosenBaseColor = normalSkinColorVariations[index];
+                    }
+                    else
+                    {
+                        chosenBaseColor = new Color(0.92f, 0.95f, 0.90f);
+                    }
+                    chosenEmission = Color.black;
+                    break;
+
+                case ZombieType.Medium:
+                    // Zombie Trung Cấp: Đột biến độc tính huỳnh quang (Toxic Green), mắt và cơ thể phát quang nhẹ
+                    chosenBaseColor = new Color(0.35f, 0.95f, 0.40f);
+                    chosenEmission = new Color(0.08f, 0.28f, 0.08f);
+                    hasCustomEmission = true;
+                    break;
+
+                case ZombieType.Boss:
+                    // Zombie Boss: Hắc ám bóng ma, đen thẫm pha đỏ máu (Blood Obsidian), phát quang lửa đỏ ma quỷ
+                    chosenBaseColor = new Color(0.28f, 0.12f, 0.12f);
+                    chosenEmission = new Color(0.55f, 0.08f, 0.02f);
+                    hasCustomEmission = true;
+                    break;
+            }
+        }
+        else
+        {
+            chosenBaseColor = customSkinColor;
+            chosenEmission = customEmissionColor;
+            hasCustomEmission = customEmissionColor != Color.black;
+        }
+
+        // Áp dụng màu lên tất cả các Renderer của zombie
+        foreach (var rend in renderers)
+        {
+            if (rend is ParticleSystemRenderer) continue;
+
+            foreach (var mat in rend.materials)
+            {
+                if (mat == null) continue;
+
+                if (mat.HasProperty("_BaseColor"))
+                {
+                    mat.SetColor("_BaseColor", chosenBaseColor);
+                }
+                else if (mat.HasProperty("_Color"))
+                {
+                    mat.SetColor("_Color", chosenBaseColor);
+                }
+
+                if (hasCustomEmission && mat.HasProperty("_EmissionColor"))
+                {
+                    mat.EnableKeyword("_EMISSION");
+                    mat.SetColor("_EmissionColor", chosenEmission);
+                }
             }
         }
     }
@@ -738,6 +863,22 @@ public class ZombieAI : MonoBehaviour
             if (agent != null) agent.speed = runSpeed;
             customZombieName = "★ [CUỒNG NỘ] BOSS ZOMBIE CHÚA ★";
             AlertNearbyZombies(callHordeRadius * 1.5f); // Gầm thét triệu tập toàn bộ zombie bán kính rộng
+
+            // Tăng cường phát quang đỏ rực khi Boss nổi điên
+            Renderer[] bossRends = GetComponentsInChildren<Renderer>();
+            foreach (var r in bossRends)
+            {
+                if (r is ParticleSystemRenderer) continue;
+                foreach (var m in r.materials)
+                {
+                    if (m != null && m.HasProperty("_EmissionColor"))
+                    {
+                        m.EnableKeyword("_EMISSION");
+                        m.SetColor("_EmissionColor", new Color(0.95f, 0.1f, 0.05f));
+                    }
+                }
+            }
+
             Debug.Log($"<color=red><b>{customZombieName} đã rơi vào trạng thái CUỒNG NỘ!</b></color>");
         }
 
