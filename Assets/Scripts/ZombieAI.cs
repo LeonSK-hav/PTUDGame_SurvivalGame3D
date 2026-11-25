@@ -69,6 +69,13 @@ public class ZombieAI : MonoBehaviour
     public float maxWanderWaitTime = 5f;  // Thời gian đứng nghỉ tối đa
     public float wanderSpeed = 1.8f;      // Tốc độ di chuyển khi đi dạo/tuần tra
     
+    [Header("Ground & Map Boundary (Đi trên mặt đất & Giới hạn Map)")]
+    public bool enableGroundSnapping = true;       // Bám sát bề mặt mặt đất/địa hình
+    public LayerMask groundLayerMask = ~0;        // Layer quét mặt đất (mặc định quét tất cả)
+    public float groundOffsetY = 0f;              // Tinh chỉnh độ cao tiếp xúc chân với mặt đất
+    public bool constrainToTerrainBounds = true;  // Không cho zombie đi ra khỏi giới hạn Terrain
+    public float terrainBoundaryMargin = 4f;      // Khoảng cách an toàn cách mép Terrain
+    
     private Vector3 initialPosition;      // Vị trí xuất phát của zombie
     private float wanderTimer = 0f;
     private float wanderMoveTimeout = 0f;
@@ -122,6 +129,11 @@ public class ZombieAI : MonoBehaviour
     private void Start()
     {
         currentHealth = maxHealth;
+
+        // Khởi tạo tường va chạm ranh giới map Terrain và đặt zombie tiếp đất chính xác
+        EnsureTerrainBoundaries();
+        SnapToGroundImmediate();
+
         initialPosition = transform.position;
         wanderTimer = Random.Range(0.5f, minWanderWaitTime);
 
@@ -525,13 +537,16 @@ public class ZombieAI : MonoBehaviour
             else if (distance > attackDistance)
             {
                 agent.isStopped = false;
-                agent.SetDestination(target.position);
+                agent.SetDestination(ClampToTerrainBounds(target.position));
                 agent.speed = Runner ? runSpeed : walkSpeed;
                 anim.SetBool("Run", Runner);
             }
             else
             {
                 agent.isStopped = true;
+                agent.velocity = Vector3.zero;
+                anim.SetBool("Run", false);
+                anim.SetFloat("Speed", 0f);
                 TryAttack();
             }
         }
@@ -552,6 +567,18 @@ public class ZombieAI : MonoBehaviour
         }
         
         anim.SetFloat("Speed", agent.velocity.magnitude);
+
+        // Bám sát mặt đất / địa hình và giữ zombie không trôi ra ngoài biên map
+        AlignToGround();
+
+        if (constrainToTerrainBounds && Terrain.activeTerrain != null && agent.isOnNavMesh)
+        {
+            Vector3 clampedPos = ClampToTerrainBounds(transform.position);
+            if ((Mathf.Abs(transform.position.x - clampedPos.x) > 0.5f || Mathf.Abs(transform.position.z - clampedPos.z) > 0.5f))
+            {
+                agent.Warp(clampedPos);
+            }
+        }
 
         if (currentHealth <= 0 && !dead)
         {
@@ -617,11 +644,12 @@ public class ZombieAI : MonoBehaviour
         {
             Vector2 randCircle = Random.insideUnitCircle * wanderRadius;
             Vector3 randomPos = center + new Vector3(randCircle.x, 0, randCircle.y);
+            randomPos = ClampToTerrainBounds(randomPos);
 
             NavMeshHit hit;
             if (NavMesh.SamplePosition(randomPos, out hit, wanderRadius, NavMesh.AllAreas))
             {
-                result = hit.position;
+                result = ClampToTerrainBounds(hit.position);
                 return true;
             }
         }
@@ -631,16 +659,17 @@ public class ZombieAI : MonoBehaviour
         {
             Vector2 randCircle = Random.insideUnitCircle * wanderRadius;
             Vector3 randomPos = transform.position + new Vector3(randCircle.x, 0, randCircle.y);
+            randomPos = ClampToTerrainBounds(randomPos);
 
             NavMeshHit hit;
             if (NavMesh.SamplePosition(randomPos, out hit, 5f, NavMesh.AllAreas))
             {
-                result = hit.position;
+                result = ClampToTerrainBounds(hit.position);
                 return true;
             }
         }
 
-        result = transform.position;
+        result = ClampToTerrainBounds(transform.position);
         return false;
     }
 
@@ -814,11 +843,29 @@ public class ZombieAI : MonoBehaviour
     void TryAttack()
     {
         if (hit || dead) return;
+
+        // Xoay mặt zombie nhìn thẳng về phía player khi ở cự ly tấn công
+        if (target != null)
+        {
+            Vector3 lookDir = target.position - transform.position;
+            lookDir.y = 0f;
+            if (lookDir.sqrMagnitude > 0.001f)
+            {
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 15f);
+            }
+        }
+
         if (Time.time >= nextAttackTime)
         {
+            // Kích hoạt animation cắn/chém (gọi cả "attack" thường và "Attack" hoa để tương thích controller)
+            anim.SetTrigger("attack");
             anim.SetTrigger("Attack");
-            playerHealth.TakeDamage(damageAmount);
-            nextAttackTime = Time.time + Mathf.Max(0f, attackCooldown);
+
+            if (playerHealth != null)
+            {
+                playerHealth.TakeDamage(damageAmount);
+            }
+            nextAttackTime = Time.time + Mathf.Max(0.5f, attackCooldown);
         }
     }
 
@@ -838,6 +885,150 @@ public class ZombieAI : MonoBehaviour
         }
         hit = false;
     }
+
+    #region Ground Alignment & Map Boundary (Bám đất & Giới hạn biên Map)
+
+    void SnapToGroundImmediate()
+    {
+        Vector3 curPos = transform.position;
+        float targetY = curPos.y;
+        bool foundGround = false;
+
+        // 1. Quét tia Raycast tìm mặt đất/terrain
+        int mask = groundLayerMask;
+        mask &= ~(1 << gameObject.layer);
+        int playerLayer = LayerMask.NameToLayer("Player");
+        if (playerLayer >= 0) mask &= ~(1 << playerLayer);
+
+        RaycastHit hit;
+        if (Physics.Raycast(curPos + Vector3.up * 3f, Vector3.down, out hit, 15f, mask, QueryTriggerInteraction.Ignore))
+        {
+            targetY = hit.point.y + groundOffsetY;
+            foundGround = true;
+        }
+        else if (Terrain.activeTerrain != null)
+        {
+            targetY = Terrain.activeTerrain.SampleHeight(curPos) + Terrain.activeTerrain.transform.position.y + groundOffsetY;
+            foundGround = true;
+        }
+
+        if (foundGround)
+        {
+            transform.position = new Vector3(curPos.x, targetY, curPos.z);
+        }
+
+        // 2. Snap vào NavMesh
+        if (agent != null)
+        {
+            NavMeshHit navHit;
+            if (NavMesh.SamplePosition(transform.position, out navHit, 5f, NavMesh.AllAreas))
+            {
+                agent.Warp(navHit.position);
+            }
+        }
+    }
+
+    void AlignToGround()
+    {
+        if (!enableGroundSnapping || dead || agent == null || !agent.enabled) return;
+
+        // Nếu agent bị văng khỏi NavMesh, thử warp lại
+        if (!agent.isOnNavMesh)
+        {
+            NavMeshHit navHit;
+            if (NavMesh.SamplePosition(transform.position, out navHit, 5f, NavMesh.AllAreas))
+            {
+                agent.Warp(navHit.position);
+            }
+            return;
+        }
+
+        // Quét Raycast xuống dưới để bù trừ độ cao địa hình mấp mô
+        int mask = groundLayerMask;
+        mask &= ~(1 << gameObject.layer);
+        int playerLayer = LayerMask.NameToLayer("Player");
+        if (playerLayer >= 0) mask &= ~(1 << playerLayer);
+
+        RaycastHit hit;
+        Vector3 origin = transform.position + Vector3.up * 1.5f;
+        float groundY = transform.position.y;
+        bool hasHit = false;
+
+        if (Physics.Raycast(origin, Vector3.down, out hit, 4f, mask, QueryTriggerInteraction.Ignore))
+        {
+            groundY = hit.point.y + groundOffsetY;
+            hasHit = true;
+        }
+        else if (Terrain.activeTerrain != null)
+        {
+            groundY = Terrain.activeTerrain.SampleHeight(transform.position) + Terrain.activeTerrain.transform.position.y + groundOffsetY;
+            hasHit = true;
+        }
+
+        if (hasHit)
+        {
+            float diff = groundY - transform.position.y;
+            // Điều chỉnh mượt mà baseOffset của NavMeshAgent để bàn chân luôn tiếp đất
+            agent.baseOffset = Mathf.Lerp(agent.baseOffset, agent.baseOffset + diff, Time.deltaTime * 15f);
+        }
+    }
+
+    void EnsureTerrainBoundaries()
+    {
+        if (!constrainToTerrainBounds || Terrain.activeTerrain == null) return;
+        if (GameObject.Find("Terrain_Map_Boundaries") != null) return;
+
+        GameObject boundaryRoot = new GameObject("Terrain_Map_Boundaries");
+        Vector3 tPos = Terrain.activeTerrain.transform.position;
+        Vector3 tSize = Terrain.activeTerrain.terrainData.size;
+        float wallHeight = 50f;
+        float wallThickness = 4f;
+
+        CreateBoundaryWall(boundaryRoot, "Wall_North", 
+            new Vector3(tPos.x + tSize.x * 0.5f, tPos.y + wallHeight * 0.5f, tPos.z + tSize.z), 
+            new Vector3(tSize.x, wallHeight, wallThickness));
+
+        CreateBoundaryWall(boundaryRoot, "Wall_South", 
+            new Vector3(tPos.x + tSize.x * 0.5f, tPos.y + wallHeight * 0.5f, tPos.z), 
+            new Vector3(tSize.x, wallHeight, wallThickness));
+
+        CreateBoundaryWall(boundaryRoot, "Wall_East", 
+            new Vector3(tPos.x + tSize.x, tPos.y + wallHeight * 0.5f, tPos.z + tSize.z * 0.5f), 
+            new Vector3(wallThickness, wallHeight, tSize.z));
+
+        CreateBoundaryWall(boundaryRoot, "Wall_West", 
+            new Vector3(tPos.x, tPos.y + wallHeight * 0.5f, tPos.z + tSize.z * 0.5f), 
+            new Vector3(wallThickness, wallHeight, tSize.z));
+    }
+
+    void CreateBoundaryWall(GameObject parent, string name, Vector3 pos, Vector3 size)
+    {
+        GameObject wall = new GameObject(name);
+        wall.transform.parent = parent.transform;
+        wall.transform.position = pos;
+        BoxCollider box = wall.AddComponent<BoxCollider>();
+        box.size = size;
+        box.isTrigger = false; // Va chạm cứng để chặn zombie và player không đi ra ngoài map
+    }
+
+    Vector3 ClampToTerrainBounds(Vector3 pos)
+    {
+        if (!constrainToTerrainBounds || Terrain.activeTerrain == null) return pos;
+
+        Vector3 tPos = Terrain.activeTerrain.transform.position;
+        Vector3 tSize = Terrain.activeTerrain.terrainData.size;
+
+        float minX = tPos.x + terrainBoundaryMargin;
+        float maxX = tPos.x + tSize.x - terrainBoundaryMargin;
+        float minZ = tPos.z + terrainBoundaryMargin;
+        float maxZ = tPos.z + tSize.z - terrainBoundaryMargin;
+
+        pos.x = Mathf.Clamp(pos.x, minX, maxX);
+        pos.z = Mathf.Clamp(pos.z, minZ, maxZ);
+        return pos;
+    }
+
+    #endregion
 
     #region Zombie Item Drop System (Cơ chế rơi đồ khi Zombie chết)
 
