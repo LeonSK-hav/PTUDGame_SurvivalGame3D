@@ -356,7 +356,7 @@ public class ZombieAI : MonoBehaviour
 
         // Tự động làm mới ngoại hình và skin nhận diện
         ApplyZombieSkin();
-        if (materialColorDataList.Count > 0)
+        if (Application.isPlaying && materialColorDataList.Count > 0)
         {
             InitializeHitFlashMaterials();
         }
@@ -430,9 +430,51 @@ public class ZombieAI : MonoBehaviour
         Renderer[] renderers = GetComponentsInChildren<Renderer>();
         if (renderers == null || renderers.Length == 0) return;
 
-        Color chosenBaseColor = Color.white;
-        Color chosenEmission = Color.black;
-        bool hasCustomEmission = false;
+#if UNITY_EDITOR
+        // Trong Edit Mode (khi thao tác trong Editor hoặc bấm Context Menu)
+        // Luôn sử dụng sharedMaterials để tránh lỗi leak material và Unity cảnh báo trong Console
+        if (!Application.isPlaying)
+        {
+            Material targetMat = customSkinMaterial;
+
+            if (targetMat == null && autoTierVisuals)
+            {
+                string matPath = "";
+                switch (zombieType)
+                {
+                    case ZombieType.Normal:
+                        matPath = "Assets/ForZombies/3D Characters Zombie City Streets Lowpoly Pack - Lite/Materials/Zombie_Skin_Normal.mat";
+                        break;
+                    case ZombieType.Medium:
+                        matPath = "Assets/ForZombies/3D Characters Zombie City Streets Lowpoly Pack - Lite/Materials/Zombie_Skin_Medium_Toxic.mat";
+                        break;
+                    case ZombieType.Boss:
+                        matPath = "Assets/ForZombies/3D Characters Zombie City Streets Lowpoly Pack - Lite/Materials/Zombie_Skin_Boss_Nightmare.mat";
+                        break;
+                }
+
+                if (!string.IsNullOrEmpty(matPath))
+                {
+                    targetMat = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                }
+            }
+
+            if (targetMat != null)
+            {
+                customSkinMaterial = targetMat;
+                foreach (var rend in renderers)
+                {
+                    if (rend is ParticleSystemRenderer) continue;
+                    Material[] sharedMats = new Material[rend.sharedMaterials.Length];
+                    for (int i = 0; i < sharedMats.Length; i++) sharedMats[i] = targetMat;
+                    rend.sharedMaterials = sharedMats;
+                    UnityEditor.EditorUtility.SetDirty(rend);
+                }
+                UnityEditor.EditorUtility.SetDirty(gameObject);
+                return;
+            }
+        }
+#endif
 
         if (customSkinMaterial != null)
         {
@@ -440,12 +482,25 @@ public class ZombieAI : MonoBehaviour
             foreach (var rend in renderers)
             {
                 if (rend is ParticleSystemRenderer) continue;
-                Material[] mats = new Material[rend.sharedMaterials.Length];
-                for (int i = 0; i < mats.Length; i++) mats[i] = customSkinMaterial;
-                rend.materials = mats;
+                if (!Application.isPlaying)
+                {
+                    Material[] mats = new Material[rend.sharedMaterials.Length];
+                    for (int i = 0; i < mats.Length; i++) mats[i] = customSkinMaterial;
+                    rend.sharedMaterials = mats;
+                }
+                else
+                {
+                    Material[] mats = new Material[rend.materials.Length];
+                    for (int i = 0; i < mats.Length; i++) mats[i] = customSkinMaterial;
+                    rend.materials = mats;
+                }
             }
             return;
         }
+
+        Color chosenBaseColor = Color.white;
+        Color chosenEmission = Color.black;
+        bool hasCustomEmission = false;
 
         if (autoTierVisuals)
         {
@@ -487,28 +542,31 @@ public class ZombieAI : MonoBehaviour
             hasCustomEmission = customEmissionColor != Color.black;
         }
 
-        // Áp dụng màu lên tất cả các Renderer của zombie
-        foreach (var rend in renderers)
+        // Áp dụng màu lên tất cả các Renderer của zombie (chỉ thực hiện khi Play game)
+        if (Application.isPlaying)
         {
-            if (rend is ParticleSystemRenderer) continue;
-
-            foreach (var mat in rend.materials)
+            foreach (var rend in renderers)
             {
-                if (mat == null) continue;
+                if (rend is ParticleSystemRenderer) continue;
 
-                if (mat.HasProperty("_BaseColor"))
+                foreach (var mat in rend.materials)
                 {
-                    mat.SetColor("_BaseColor", chosenBaseColor);
-                }
-                else if (mat.HasProperty("_Color"))
-                {
-                    mat.SetColor("_Color", chosenBaseColor);
-                }
+                    if (mat == null) continue;
 
-                if (hasCustomEmission && mat.HasProperty("_EmissionColor"))
-                {
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetColor("_EmissionColor", chosenEmission);
+                    if (mat.HasProperty("_BaseColor"))
+                    {
+                        mat.SetColor("_BaseColor", chosenBaseColor);
+                    }
+                    else if (mat.HasProperty("_Color"))
+                    {
+                        mat.SetColor("_Color", chosenBaseColor);
+                    }
+
+                    if (hasCustomEmission && mat.HasProperty("_EmissionColor"))
+                    {
+                        mat.EnableKeyword("_EMISSION");
+                        mat.SetColor("_EmissionColor", chosenEmission);
+                    }
                 }
             }
         }
@@ -517,6 +575,8 @@ public class ZombieAI : MonoBehaviour
     // Khởi tạo danh sách material để tạo hiệu ứng nhấp nháy đỏ khi bị bắn
     void InitializeHitFlashMaterials()
     {
+        if (!Application.isPlaying) return;
+
         materialColorDataList.Clear();
         Renderer[] renderers = GetComponentsInChildren<Renderer>();
         foreach (var rend in renderers)
